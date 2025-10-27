@@ -3,8 +3,8 @@ import os
 import datetime
 from importlib.metadata import version as get_version
 
-project = 's1ard'
-authors = 'the s1ard developers'
+project = 'cesard'
+authors = 'the cesard developers'
 year = datetime.datetime.now().year
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -54,6 +54,7 @@ intersphinx_mapping = {
     'pystac': ('https://pystac.readthedocs.io/en/stable', None),
     'pystac-client': ('https://pystac-client.readthedocs.io/en/stable', None),
     'python': ('https://docs.python.org/3', None),
+    's1ard': ('https://s1ard.readthedocs.io/en/latest', None),
     'scipy': ('https://docs.scipy.org/doc/scipy', None),
     'spatialist': ('https://spatialist.readthedocs.io/en/latest', None),
     'stac-geoparquet': ('https://stac-utils.github.io/stac-geoparquet/latest', None)

@@ -6,21 +6,21 @@ from datetime import datetime, timezone
 from spatialist import Raster
 from spatialist.ancillary import finder
 from statistics import mean
-from s1ard.metadata.mapping import ASSET_MAP, NS_MAP
-from s1ard.metadata.extract import get_header_size
+from cesard.metadata.mapping import ASSET_MAP, NS_MAP
+from cesard.metadata.extract import get_header_size
 import logging
 
-log = logging.getLogger('s1ard')
+log = logging.getLogger('cesard')
 
 
 def parse(meta, target, assets, exist_ok=False):
     """
-    Wrapper for :func:`~s1ard.metadata.xml.source_xml` and :func:`~s1ard.metadata.xml.product_xml`.
+    Wrapper for :func:`~cesard.metadata.xml.source_xml` and :func:`~cesard.metadata.xml.product_xml`.
     
     Parameters
     ----------
     meta: dict
-        Metadata dictionary generated with :func:`~s1ard.metadata.extract.meta_dict`.
+        Metadata dictionary generated with :func:`~cesard.metadata.extract.meta_dict`.
     target: str
         A path pointing to the root directory of a product scene.
     assets: list[str]
@@ -50,7 +50,7 @@ def source_xml(meta, target, nsmap, ard_ns, exist_ok=False):
     Parameters
     ----------
     meta: dict
-        Metadata dictionary generated with :func:`~s1ard.metadata.extract.meta_dict`
+        Metadata dictionary generated with :func:`~cesard.metadata.extract.meta_dict`
     target: str
         A path pointing to the root directory of a product scene.
     nsmap: dict
@@ -209,7 +209,7 @@ def product_xml(meta, target, assets, nsmap, ard_ns, exist_ok=False):
     Parameters
     ----------
     meta: dict
-        Metadata dictionary generated with :func:`~s1ard.metadata.extract.meta_dict`
+        Metadata dictionary generated with :func:`~cesard.metadata.extract.meta_dict`
     target: str
         A path pointing to the root directory of a product scene.
     assets: list[str]
@@ -603,12 +603,12 @@ def _om_procedure(root, nsmap, ard_ns, scene_id, meta, uid=None, prod=True):
     scene_id: str
         Scene basename.
     meta: dict
-        Metadata dictionary generated with :func:`~s1ard.metadata.extract.meta_dict`
+        Metadata dictionary generated with :func:`~cesard.metadata.extract.meta_dict`
     uid: str or None
         Unique identifier of a source SLC scene.
     prod: bool
-        Return XML subelements for further usage in :func:`~s1ard.metadata.xml.product_xml` parsing function?
-        Default is True. If False, the XML subelements for further usage in the :func:`~s1ard.metadata.xml.source_xml`
+        Return XML subelements for further usage in :func:`~cesard.metadata.xml.product_xml` parsing function?
+        Default is True. If False, the XML subelements for further usage in the :func:`~cesard.metadata.xml.source_xml`
         parsing function will be returned.
     """
     procedure = etree.SubElement(root, _nsc('om:procedure', nsmap))

@@ -1,6 +1,6 @@
 import pytest
 import requests
-from s1ard.metadata.mapping import URL
+from cesard.metadata.mapping import URL
 
 
 def url_recursive(key, dictionary, parent_key=None):

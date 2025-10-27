@@ -1,7 +1,7 @@
 Tile Extraction
 ---------------
 
-.. automodule:: s1ard.tile_extraction
+.. automodule:: cesard.tile_extraction
     :members:
     :undoc-members:
     :show-inheritance:

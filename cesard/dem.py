@@ -4,12 +4,12 @@ import itertools
 from getpass import getpass
 from pyroSAR.auxdata import dem_autoload, dem_create
 from pyroSAR.ancillary import Lock
-import s1ard.tile_extraction as tile_ex
-from s1ard.ancillary import generate_unique_id, get_max_ext, vrt_add_overviews, get_tmp_name
+import cesard.tile_extraction as tile_ex
+from cesard.ancillary import generate_unique_id, get_max_ext, vrt_add_overviews, get_tmp_name
 from spatialist import bbox, intersect
 import logging
 
-log = logging.getLogger('s1ard')
+log = logging.getLogger('cesard')
 
 
 def authenticate(dem_type, username=None, password=None):
@@ -227,7 +227,7 @@ def retile(vector, dem_type, dem_dir, wbm_dir, dem_strict=True,
 
     Examples
     --------
-    >>> from s1ard import dem
+    >>> from cesard import dem
     >>> from spatialist import bbox
     >>> ext = {'xmin': 12, 'xmax': 13, 'ymin': 50, 'ymax': 51}
     # strictly only create overlapping DEM tiles in their native CRS.
@@ -245,7 +245,7 @@ def retile(vector, dem_type, dem_dir, wbm_dir, dem_strict=True,
 
     See Also
     --------
-    s1ard.tile_extraction.tile_from_aoi
+    cesard.tile_extraction.tile_from_aoi
     """
     if dem_type == 'GETASSE30':
         geoid_convert = False

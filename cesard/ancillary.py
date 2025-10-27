@@ -1,6 +1,5 @@
 import os
 import io
-import sys
 import logging
 import requests
 import hashlib
@@ -12,7 +11,7 @@ from multiformats import multihash
 import binascii
 from lxml import etree
 from datetime import datetime, timedelta, timezone
-from osgeo import gdal, ogr, osr
+from osgeo import ogr, osr
 import numpy as np
 import spatialist
 from spatialist.raster import Raster, rasterize
@@ -20,12 +19,10 @@ from spatialist.vector import bbox, intersect, boundary, vectorize, Vector, crsC
 import pyroSAR
 from pyroSAR.ancillary import Lock, LockCollection
 from pyroSAR import identify_many
-import s1ard
-from s1ard.processors.registry import load_processor
 from collections import defaultdict
 from typing import Callable, List, TypeVar
 
-log = logging.getLogger('s1ard')
+log = logging.getLogger('cesard')
 
 T = TypeVar('T')  # any type
 K = TypeVar('K')  # key
@@ -166,55 +163,6 @@ def get_max_ext(geometries, buffer=None, crs=None):
     return max_ext
 
 
-def set_logging(config, debug=False):
-    """
-    Set logging for the current process.
-    
-    Parameters
-    ----------
-    config: dict
-        Dictionary of the parsed config parameters for the current process.
-    debug: bool
-        Set logging level to DEBUG?
-    
-    Returns
-    -------
-    logging.Logger
-        The log handler for the current process.
-    """
-    level = logging.DEBUG if debug else logging.INFO
-    
-    logger = logging.getLogger('s1ard')
-    logger.setLevel(level)
-    
-    log_format = "[%(asctime)s] [%(levelname)7s] %(message)s"
-    formatter = logging.Formatter(fmt=log_format,
-                                  datefmt='%Y-%m-%d %H:%M:%S')
-    
-    logfile = config['processing']['logfile']
-    if logfile is not None:
-        os.makedirs(os.path.dirname(logfile), exist_ok=True)
-        handler = logging.FileHandler(filename=logfile, mode='a')
-    else:
-        handler = logging.StreamHandler(sys.stdout)
-    logger.addHandler(handler)
-    
-    # Add header first with simple formatting
-    formatter_simple = logging.Formatter("%(message)s")
-    handler.setFormatter(formatter_simple)
-    _log_process_config(logger=logger, config=config)
-    
-    # Use normal formatting from here on
-    handler.setFormatter(formatter)
-    
-    # add pyroSAR logger
-    log_pyro = logging.getLogger('pyroSAR')
-    log_pyro.setLevel(level)
-    log_pyro.addHandler(handler)
-    
-    return logger
-
-
 def group_by_attr(items: List[T], key_fn: Callable[[T], K]) -> List[List[T]]:
     """
     Group items based on a key function.
@@ -276,56 +224,6 @@ def group_by_time(scenes, time=3):
             groups.append([scenes[i]])
             group = groups[-1]
     return groups
-
-
-def _log_process_config(logger, config):
-    """
-    Adds a header to the logfile, which includes information about
-    the current processing configuration.
-    
-    Parameters
-    ----------
-    logger: logging.Logger
-        The logger to which the header is added to.
-    config: dict
-        Dictionary of the parsed config parameters for the current process.
-    """
-    sw_versions = {
-        's1ard': s1ard.__version__,
-        'python': sys.version,
-        'python-pyroSAR': pyroSAR.__version__,
-        'python-spatialist': spatialist.__version__,
-        'python-GDAL': gdal.__version__}
-    
-    processor_name = config['processing']['processor']
-    processor = load_processor(processor_name)
-    sw_versions.update(processor.version_dict())
-    
-    max_len_sw = len(max(sw_versions.keys(), key=len))
-    max_len_main = len(max(config['processing'].keys(), key=len))
-    max_len_meta = len(max(config['metadata'].keys(), key=len))
-    max_len_proc = len(max(config[processor_name].keys(), key=len))
-    max_len = max(max_len_sw, max_len_main, max_len_meta, max_len_proc) + 4
-    
-    lines = []
-    lines.append('=' * 100)
-    for section in ['PROCESSING', processor_name.upper(), 'METADATA']:
-        lines.append(f'{section}')
-        for k, v in config[section.lower()].items():
-            if k == 'dem_prepare_mode':
-                continue
-            if isinstance(v, datetime):
-                val = v.isoformat()
-            else:
-                val = v
-            lines.append(f"{k: <{max_len}}{val}")
-        lines.append('=' * 100)
-    lines.append('SOFTWARE')
-    for k, v in sw_versions.items():
-        lines.append(f"{k: <{max_len}}{v}")
-    lines.append('=' * 100)
-    header = '\n'.join(lines)
-    logger.info(header)
 
 
 def vrt_add_overviews(vrt, overviews, resampling='AVERAGE'):
@@ -477,7 +375,7 @@ def buffer_time(start, stop, as_datetime=False, str_format='%Y%m%dT%H%M%S', **kw
 
 def get_kml():
     """
-    Download the Sentinel-2 MGRS grid KML file. The target folder is ~/s1ard.
+    Download the Sentinel-2 MGRS grid KML file. The target folder is ~/cesard.
 
     Returns
     -------
@@ -486,7 +384,7 @@ def get_kml():
     """
     remote = ('https://sentiwiki.copernicus.eu/__attachments/1692737/'
               'S2A_OPER_GIP_TILPAR_MPC__20151209T095117_V20150622T000000_21000101T000000_B00.zip')
-    local_path = os.path.join(os.path.expanduser('~'), '.s1ard')
+    local_path = os.path.join(os.path.expanduser('~'), '.cesard')
     os.makedirs(local_path, exist_ok=True)
     local = os.path.join(local_path, os.path.basename(remote).replace('.zip', '.kml'))
     with Lock(local):
@@ -633,7 +531,7 @@ def datamask(measurement, dm_ras, dm_vec):
 def get_tmp_name(suffix):
     """
     Get the name of a temporary file with defined suffix.
-    Files are placed in a subdirectory 's1ard' of the regular
+    Files are placed in a subdirectory 'cesard' of the regular
     temporary directory so the latter is not flooded with too
     many files in case they are not properly deleted.
     
@@ -646,7 +544,7 @@ def get_tmp_name(suffix):
     -------
 
     """
-    tmpdir = os.path.join(tempfile.gettempdir(), 's1ard')
+    tmpdir = os.path.join(tempfile.gettempdir(), 'cesard')
     os.makedirs(tmpdir, exist_ok=True)
     return tempfile.NamedTemporaryFile(suffix=suffix, dir=tmpdir).name
 

@@ -11,20 +11,20 @@ In case of linear scaled backscatter data, ENL can be calculated as:
 
 where :math:`\mu` is the mean and :math:`\sigma` is the standard deviation of the image. (:cite:`cls_2016`, section A1.1.7)
 
-The ENL value stored in the metadata of each S1-NRB product is calculated as suggested in :cite:`anfinsen.etal_2009`, where ENL is first
+The ENL value stored in the metadata of each ARD product is calculated as suggested in :cite:`anfinsen.etal_2009`, where ENL is first
 calculated for small pixel windows over the cross-polarized backscatter image and afterwards the median value of
 the distribution is selected.
 
 Calculate ENL per image
 -----------------------
-While only the median value is currently stored in the metadata of each S1-NRB product, it is possible to calculate ENL
-as described above for entire images using the function :func:`s1ard.metadata.extract.calc_enl`. The following code
+While only the median value is currently stored in the metadata of each ARD product, it is possible to calculate ENL
+as described above for entire images using the function :func:`cesard.metadata.extract.calc_enl`. The following code
 example shows how to calculate ENL for 25x25 pixel windows and return the result as a numpy array. The visualization of
 the resulting array is shown in Figure 1.
 
 .. code-block:: python
 
-    from s1ard.metadata.extract import calc_enl
+    from cesard.metadata.extract import calc_enl
 
     tif = "s1a-iw-nrb-20220721t051225-044194-05465e-33tuf-vh-s-lin.tif"
     enl_arr = calc_enl(tif=tif, block_size=25, return_arr=True)

@@ -1,7 +1,7 @@
 Scene Search
 ------------
 
-.. automodule:: s1ard.search
+.. automodule:: cesard.search
     :members:
     :undoc-members:
     :show-inheritance:
@@ -11,9 +11,5 @@ Scene Search
 
         ASF
         ASFArchive
-        STACArchive
-        STACParquetArchive
         asf_select
-        check_acquisition_completeness
-        collect_neighbors
         scene_select

@@ -4,7 +4,7 @@ Metadata
 Extraction
 ^^^^^^^^^^
 
-.. automodule:: s1ard.metadata.extract
+.. automodule:: cesard.metadata.extract
     :members:
     :undoc-members:
     :show-inheritance:
@@ -13,22 +13,17 @@ Extraction
         :nosignatures:
 
         calc_enl
-        calc_geolocation_accuracy
         calc_performance_estimates
-        calc_pslr_islr
-        copy_src_meta
         find_in_annotation
         geometry_from_vec
         get_header_size
-        get_osv_info
-        get_prod_meta
         get_src_meta
-        meta_dict
+        vec_from_srccoords
 
 XML
 ^^^
 
-.. automodule:: s1ard.metadata.xml
+.. automodule:: cesard.metadata.xml
     :members:
     :undoc-members:
     :show-inheritance:
@@ -43,7 +38,7 @@ XML
 STAC
 ^^^^
 
-.. automodule:: s1ard.metadata.stac
+.. automodule:: cesard.metadata.stac
     :members:
     :undoc-members:
     :show-inheritance:
@@ -54,4 +49,3 @@ STAC
         parse
         product_json
         source_json
-        make_catalog
