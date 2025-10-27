@@ -86,6 +86,19 @@ def find_datasets(scene, outdir, epsg):
         return out
 
 
+def lsm_encoding() -> dict[str, int]:
+    """
+    Get the encoding of the layover shadow mask.
+    """
+    return {
+        'not layover, not shadow': 0,
+        'layover': 1,
+        'shadow': 2,
+        'layover in shadow': 3,
+        'nodata': 255  # dummy value
+    }
+
+
 def version_dict() -> dict[str, str]:
     """
     Get processor software version information.
