@@ -35,11 +35,11 @@ the resulting array is shown in Figure 1.
     :align: center
     :alt: Figure 1: Visualized ENL array for a S1-NRB product.
 
-    Figure 1: Visualized ENL array for a S1-NRB product processed from a Sentinel-1A SLC scene in IW mode for MGRS tile 33TUF
+    Figure 1: Visualized ENL array for a Sentinel-1 NRB product processed from a Sentinel-1A SLC scene in IW mode for MGRS tile 33TUF
     (coastline between Rome and Naples, Italy).
 
-Comparison between GRDH and NRB
--------------------------------
+Comparison between Sentinel-1 GRDH and NRB
+------------------------------------------
 :cite:`cls_2016` provides estimates of ENL for different Sentinel-1 products (average over all swaths), e.g. ENL of 4.4 for GRDH in
 IW mode, and a description of the estimation process in section D1. The following shows a simple comparison between the
 GRDH product:
@@ -59,7 +59,7 @@ consistently higher ENL values for the GRDH product (Avg. ENL: 4.81) in comparis
     :align: center
     :alt: Figure 2: Selection of homogeneous forest areas for ENL comparison between GRDH and NRB.
 
-    Figure 2: Selection of homogeneous forest areas for ENL comparison between GRDH and NRB. Green outline: North-western
+    Figure 2: Selection of homogeneous forest areas for ENL comparison between Sentinel-1 GRDH and NRB. Green outline: North-western
     corner of MGRS tile 33TUF; Background image: VH backscatter of the GRDH product.
 
 .. figure:: ../_assets/enl_grd_comparison_scatter.png
@@ -67,4 +67,4 @@ consistently higher ENL values for the GRDH product (Avg. ENL: 4.81) in comparis
     :align: center
     :alt: Figure 3: Scatter plot comparing ENL values between GRDH and NRB, calculated for selected areas (see Fig. 2).
 
-    Figure 3: Scatter plot comparing ENL values between GRDH and NRB, calculated for selected areas (see Fig. 2).
+    Figure 3: Scatter plot comparing ENL values between Sentinel-1 GRDH and NRB, calculated for selected areas (see Fig. 2).

@@ -286,7 +286,7 @@ def scene_select(archive, aoi_tiles=None, aoi_geometry=None, return_value='scene
     
     Parameters
     ----------
-    archive: pyroSAR.drivers.Archive or STACArchive or STACParquetArchive or ASFArchive
+    archive: pyroSAR.drivers.Archive or s1ard.search.STACArchive or s1ard.search.STACParquetArchive or ASFArchive
         an open scene archive connection
     aoi_tiles: list[str] or None
         a list of MGRS tile names for spatial search
