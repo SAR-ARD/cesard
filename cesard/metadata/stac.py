@@ -341,7 +341,7 @@ def product_json(meta, target, assets, exist_ok=False):
                   product_type=meta['prod']['productName-short'],
                   looks_range=meta['prod']['rangeNumberOfLooks'],
                   looks_azimuth=meta['prod']['azimuthNumberOfLooks'],
-                  looks_equivalent_number=meta['prod']['equivalentNumberLooks'])
+                  looks_equivalent_number=meta['prod']['equivalentNumberOfLooks'])
     proj_ext.apply(epsg=int(meta['prod']['crsEPSG']),
                    wkt2=meta['prod']['crsWKT'],
                    bbox=meta['prod']['geom_stac_bbox_native'],
@@ -363,18 +363,19 @@ def product_json(meta, target, assets, exist_ok=False):
     item.properties['card4l:speckle_filtering'] = meta['prod']['speckleFilterApplied']
     item.properties['card4l:noise_removal_applied'] = meta['prod']['noiseRemovalApplied']
     item.properties['card4l:conversion_eq'] = meta['prod']['backscatterConversionEq']
-    item.properties['card4l:relative_radiometric_accuracy'] = meta['prod']['radiometricAccuracyRelative']
-    item.properties['card4l:absolute_radiometric_accuracy'] = meta['prod']['radiometricAccuracyAbsolute']
+    item.properties['card4l:relative_radiometric_accuracy'] = float(meta['prod']['radiometricAccuracyRelative'])
+    item.properties['card4l:absolute_radiometric_accuracy'] = float(meta['prod']['radiometricAccuracyAbsolute'])
     item.properties['card4l:resampling_method'] = meta['prod']['geoCorrResamplingMethod']
     item.properties['card4l:dem_resampling_method'] = meta['prod']['demResamplingMethod']
     item.properties['card4l:egm_resampling_method'] = meta['prod']['demEGMResamplingMethod']
+    item.properties['card4l:gridding_convention'] = 'Sentinel-2 MGRS'
     item.properties['card4l:geometric_accuracy_type'] = meta['prod']['geoCorrAccuracyType']
     for x in ['Northern', 'Eastern']:
         key = ['geoCorrAccuracy{}{}'.format(x, y) for y in ['STDev', 'Bias']]
-        stddev = float(meta['prod'][key[0]]) if meta['prod'][key[0]] is not None else None
-        bias = float(meta['prod'][key[1]]) if meta['prod'][key[1]] is not None else None
+        stddev = float(meta['prod'][key[0]])
+        bias = float(meta['prod'][key[1]])
         item.properties['card4l:{}_geometric_accuracy'.format(x.lower())] = {'bias': bias, 'stddev': stddev}
-    item.properties['card4l:geometric_accuracy_radial_rmse'] = meta['prod']['geoCorrAccuracy_rRMSE']
+    item.properties['card4l:geometric_accuracy_radial_rmse'] = float(meta['prod']['geoCorrAccuracy_rRMSE'])
     #################################################################################
     # Add links
     
@@ -418,7 +419,14 @@ def product_json(meta, target, assets, exist_ok=False):
          "target": meta["prod"]["geoCorrAlgorithm"],
          "title": "Reference to the Geometric Correction algorithm details",
          "media_type": None},
-        {"rel": f"{meta['prod']['demType']}-model",
+        # only one type should be necessary, which is available via meta['prod']['demType']
+        # However, the validation fails, because the schema expects both
+        {"rel": "elevation-model",
+         "target": meta["prod"]["demReference"],
+         "title": f"Digital Elevation Model used as auxiliary data during processing: "
+                  f"{meta['prod']['demName']}",
+         "media_type": None},
+        {"rel": "surface-model",
          "target": meta["prod"]["demReference"],
          "title": f"Digital Elevation Model used as auxiliary data during processing: "
                   f"{meta['prod']['demName']}",
@@ -537,6 +545,19 @@ def product_json(meta, target, assets, exist_ok=False):
         ClassificationExtension.add_to(item)
     FileExtension.add_to(item)
     RasterExtension.add_to(item)
+    
+    # downgrade some extensions as required by the card4l extension
+    exts = list(item.stac_extensions)
+    item.stac_extensions = [
+        "https://stac-extensions.github.io/file/v2.0.0/schema.json"
+        if e.startswith("https://stac-extensions.github.io/file/")
+        else "https://stac-extensions.github.io/projection/v1.0.0/schema.json"
+        if e.startswith("https://stac-extensions.github.io/projection/")
+        else e
+        for e in exts
+    ]
+    
+    item.validate()
     item.save_object(dest_href=outname)
 
 
