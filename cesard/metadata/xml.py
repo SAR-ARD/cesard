@@ -129,7 +129,7 @@ def source_xml(meta, target, nsmap, ard_ns, exist_ok=False):
                   (processingInformation, 'eop:processorVersion', None, 'processorVersion'),
                   (processingInformation, 'eop:processingMode', None, 'processingMode'),
                   (processingInformation, '_:orbitDataSource', None, 'orbitDataSource'),
-                  (processingInformation, '_:orbitStateVector', {'access': str(meta['source'][uid]['orbitDataAccess'])},
+                  (processingInformation, '_:orbitStateVector', {'access': meta['source'][uid]['orbitDataAccess']},
                    'orbitStateVector'),
                   (processingInformation, '_:lutApplied', None, 'lutApplied'),
                   (earthObservationMetaData, '_:productType', {'codeSpace': 'urn:esa:eop:Sentinel1:class'},
@@ -410,7 +410,7 @@ def product_xml(meta, target, assets, nsmap, ard_ns, exist_ok=False):
     if meta['prod']['noiseRemovalApplied']:
         noiseRemovalAlgorithm = etree.SubElement(processingInformation,
                                                  _nsc('_:noiseRemovalAlgorithm', nsmap, ard_ns=ard_ns),
-                                                 attrib={_nsc('xlink:href', nsmap): str(value)})
+                                                 attrib={_nsc('xlink:href', nsmap): value})
     if meta['prod']['RTCAlgorithm'] is not None:
         rtcAlgorithm = etree.SubElement(processingInformation, _nsc('_:RTCAlgorithm', nsmap, ard_ns=ard_ns),
                                         attrib={_nsc('xlink:href', nsmap): meta['prod']['RTCAlgorithm']})
