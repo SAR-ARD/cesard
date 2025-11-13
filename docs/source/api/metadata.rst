@@ -14,10 +14,8 @@ Extraction
 
         calc_enl
         calc_performance_estimates
-        find_in_annotation
         geometry_from_vec
         get_header_size
-        get_src_meta
         vec_from_srccoords
 
 XML

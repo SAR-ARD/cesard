@@ -1,7 +1,5 @@
-import os
 import re
 import json
-from lxml import etree
 import numpy as np
 from spatialist import Raster
 from spatialist.auxil import crsConvert
@@ -48,39 +46,6 @@ def vec_from_srccoords(coord_list, crs, layername='polygon'):
     return vec
 
 
-def get_src_meta(sid):
-    """
-    Retrieve the manifest and annotation XML data of a scene as a dictionary using an :class:`pyroSAR.drivers.ID`
-    object.
-    
-    Parameters
-    ----------
-    sid:  pyroSAR.drivers.ID
-        A pyroSAR :class:`~pyroSAR.drivers.ID` object generated with e.g. :func:`pyroSAR.drivers.identify`.
-    
-    Returns
-    -------
-    dict
-        A dictionary containing the parsed `etree.ElementTree` objects for the manifest and annotation XML files.
-    """
-    files = sid.findfiles(r'^s1[abcd].*-[vh]{2}-.*\.xml$')
-    pols = list(set([re.search('[vh]{2}', os.path.basename(a)).group() for a in files]))
-    annotation_files = list(filter(re.compile(pols[0]).search, files))
-    
-    a_files_base = [os.path.basename(a) for a in annotation_files]
-    swaths = [re.search('-(iw[1-3]*|ew[1-5]*|s[1-6])', a).group(1) for a in a_files_base]
-    
-    annotation_dict = {}
-    for s, a in zip(swaths, annotation_files):
-        annotation_dict[s.upper()] = etree.fromstring(sid.getFileObj(a).getvalue())
-    
-    with sid.getFileObj(sid.findfiles('manifest.safe')[0]) as input_man:
-        manifest = etree.fromstring(input_man.getvalue())
-    
-    return {'manifest': manifest,
-            'annotation': annotation_dict}
-
-
 def geometry_from_vec(vectorobject):
     """
     Get geometry information for usage in STAC and XML metadata from a :class:`spatialist.vector.Vector` object.
@@ -118,73 +83,6 @@ def geometry_from_vec(vectorobject):
     out['envelope'] = ' '.join(wkt_list)
     
     return out
-
-
-def find_in_annotation(annotation_dict, pattern, single=False, out_type='str'):
-    """
-    Search for a pattern in all XML annotation files provided and return a dictionary of results.
-    
-    Parameters
-    ----------
-    annotation_dict: dict
-        A dict of annotation files in the form: {'swath ID': `lxml.etree._Element` object}
-    pattern: str
-        The pattern to search for in each annotation file.
-    single: bool
-        If True, the results found in each annotation file are expected to be the same and therefore only a single
-        value will be returned instead of a dict. If the results differ, an error is raised. Default is False.
-    out_type: str
-        Output type to convert the results to. Can be one of the following:
-        
-        - 'str' (default)
-        - 'float'
-        - 'int'
-    
-    Returns
-    -------
-    out: dict
-        A dictionary of the results containing a list for each of the annotation files. E.g.,
-        {'swath ID': list[str or float or int]}
-    """
-    out = {}
-    for s, a in annotation_dict.items():
-        swaths = [x.text for x in a.findall('.//swathProcParams/swath')]
-        items = a.findall(pattern)
-        
-        parent = items[0].getparent().tag
-        if parent in ['azimuthProcessing', 'rangeProcessing']:
-            for i, val in enumerate(items):
-                out[swaths[i]] = val.text
-        else:
-            out[s] = [x.text for x in items]
-            if len(out[s]) == 1:
-                out[s] = out[s][0]
-    
-    def _convert(obj, type):
-        if isinstance(obj, list):
-            return [_convert(x, type) for x in obj]
-        elif isinstance(obj, str):
-            if type == 'float':
-                return float(obj)
-            if type == 'int':
-                return int(obj)
-    
-    if out_type != 'str':
-        for k, v in list(out.items()):
-            out[k] = _convert(v, out_type)
-    
-    err_msg = 'Search result for pattern "{}" expected to be the same in all annotation files.'
-    if single:
-        val = list(out.values())[0]
-        for k in out:
-            if out[k] != val:
-                raise RuntimeError(err_msg.format(pattern))
-        if out_type != 'str':
-            return _convert(val, out_type)
-        else:
-            return val
-    else:
-        return out
 
 
 def calc_enl(tif, block_size=30, return_arr=False, decimals=2):
