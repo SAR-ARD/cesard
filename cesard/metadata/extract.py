@@ -5,29 +5,34 @@ from spatialist import Raster
 from spatialist.auxil import crsConvert
 from spatialist.vector import Vector
 from osgeo import gdal, ogr
+from typing import Any
 
 gdal.UseExceptions()
 
 
-def vec_from_srccoords(coord_list, crs, layername='polygon'):
+def vec_from_srccoords(
+        coord_list: list[list[tuple[float, float]]],
+        crs: int | str,
+        layername: str = 'polygon'
+) -> Vector:
     """
     Creates a single :class:`~spatialist.vector.Vector` object from a list
     of footprint coordinates of source scenes.
     
     Parameters
     ----------
-    coord_list: list[list[tuple[float]]]
+    coord_list:
         List containing for each source scene a list of coordinate pairs as
         retrieved from the metadata stored in an :class:`~pyroSAR.drivers.ID`
         object.
-    crs: int or str
+    crs:
         the coordinate reference system of the provided coordinates.
-    layername: str
+    layername:
         the layer name of the output vector object
     
     Returns
     -------
-    spatialist.vector.Vector
+        the vector object
     """
     srs = crsConvert(crs, 'osr')
     pts = ogr.Geometry(ogr.wkbMultiPoint)
@@ -46,18 +51,19 @@ def vec_from_srccoords(coord_list, crs, layername='polygon'):
     return vec
 
 
-def geometry_from_vec(vectorobject):
+def geometry_from_vec(
+        vectorobject: Vector
+) -> dict[str, Any]:
     """
     Get geometry information for usage in STAC and XML metadata from a :class:`spatialist.vector.Vector` object.
     
     Parameters
     ----------
-    vectorobject: spatialist.vector.Vector
+    vectorobject:
         The vector object to extract geometry information from.
     
     Returns
     -------
-    out: dict
         A dictionary containing the geometry information extracted from the vector object.
     """
     out = {}
@@ -85,7 +91,12 @@ def geometry_from_vec(vectorobject):
     return out
 
 
-def calc_enl(tif, block_size=30, return_arr=False, decimals=2):
+def calc_enl(
+        tif: str,
+        block_size: int = 30,
+        return_arr: bool = False,
+        decimals: int = 2
+) -> float | np.ndarray | None:
     """
     Calculate the Equivalent Number of Looks (ENL) for a linear-scaled backscatter
     measurement GeoTIFF file. The calculation is performed block-wise for the
@@ -93,15 +104,15 @@ def calc_enl(tif, block_size=30, return_arr=False, decimals=2):
     
     Parameters
     ----------
-    tif: str
+    tif:
         The path to a linear-scaled backscatter measurement GeoTIFF file.
-    block_size: int, optional
+    block_size:
         The block size to use for the calculation. Remainder pixels are discarded,
          if the array dimensions are not evenly divisible by the block size.
          Default is 30, which calculates ENL for 30x30 pixel blocks.
-    return_arr: bool, optional
+    return_arr:
         If True, the calculated ENL array is returned. Default is False.
-    decimals: int, optional
+    decimals:
         Number of decimal places to round the calculated ENL value to. Default is 2.
     
     Raises
@@ -111,7 +122,6 @@ def calc_enl(tif, block_size=30, return_arr=False, decimals=2):
     
     Returns
     -------
-    float or None or numpy.ndarray
         If `return_enl_arr=True`, an array of ENL values is returned. Otherwise,
         the median ENL value is returned. If the ENL array contains only NaN and
         `return_enl_arr=False`, the return value is `None`.
@@ -154,15 +164,18 @@ def calc_enl(tif, block_size=30, return_arr=False, decimals=2):
         return out_arr
 
 
-def calc_performance_estimates(files, decimals=2):
+def calc_performance_estimates(
+        files: list[str],
+        decimals: int = 2
+):
     """
     Calculates the performance estimates specified in CARD4L NRB 1.6.9 for all noise power images if available.
     
     Parameters
     ----------
-    files: list[str]
+    files:
         List of paths pointing to the noise power images the estimates should be calculated for.
-    decimals: int, optional
+    decimals:
         Number of decimal places to round the calculated values to. Default is 2.
     
     Returns
@@ -186,7 +199,7 @@ def calc_performance_estimates(files, decimals=2):
     return out
 
 
-def get_header_size(tif):
+def get_header_size(tif: str) -> int:
     """
     Gets the header size of a GeoTIFF file in bytes.
     The code used in this function and its helper function `_get_block_offset` were extracted from the following
@@ -208,12 +221,12 @@ def get_header_size(tif):
     
     Parameters
     ----------
-    tif: str
+    tif:
         A path to a GeoTIFF file of the currently processed ARD product.
 
     Returns
     -------
-    header_size: int
+    header_size:
         The size of all IFD headers of the GeoTIFF file in bytes.
     """
     
