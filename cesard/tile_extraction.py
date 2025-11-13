@@ -3,34 +3,40 @@ import itertools
 from lxml import html
 from spatialist.vector import Vector, wkt2vector, bbox
 from spatialist.auxil import utm_autodetect
+from pyroSAR.drivers import ID
 from cesard.ancillary import get_max_ext, buffer_min_overlap, get_kml, combine_polygons
 from osgeo import ogr
 
 
-def tile_from_aoi(vector, epsg=None, strict=True, return_geometries=False, tilenames=None):
+def tile_from_aoi(
+        vector: Vector | list[Vector],
+        epsg: int | list[int] | None = None,
+        strict: bool = True,
+        return_geometries: bool = False,
+        tilenames: list[str] | None = None
+) -> list[str | Vector]:
     """
     Return a list of MGRS tile IDs or vector objects overlapping one or multiple areas of interest.
     
     Parameters
     -------
-    vector: spatialist.vector.Vector or list[spatialist.vector.Vector]
+    vector:
         The vector object(s) to read. CRS must be EPSG:4236.
-    epsg: int or list[int] or None
+    epsg:
         Define which EPSG code(s) are allowed for the tile selection.
         If None, all tile IDs are returned regardless of projection.
-    strict: bool
+    strict:
         Strictly only return the names/geometries of the overlapping tiles in the target projection
         or also allow reprojection of neighbouring tiles?
         In the latter case a tile name takes the form <tile ID>_<EPSG code>, e.g. `33TUN_32632`.
         Only applies if argument `epsg` is of type `int` or a list with one element.
-    return_geometries: bool
+    return_geometries:
         return a list of :class:`spatialist.vector.Vector` geometry objects (or just the tile names)?
-    tilenames: list[str] or None
+    tilenames:
         an optional list of MGRS tile names to limit the selection
     
     Returns
     -------
-    tiles: list[str or spatialist.vector.Vector]
         A list of unique MGRS tile IDs or :class:`spatialist.vector.Vector`
         objects with an attribute `mgrs` containing the tile ID.
     """
@@ -81,14 +87,16 @@ def tile_from_aoi(vector, epsg=None, strict=True, return_geometries=False, tilen
     return sorted(tiles, key=sortkey)
 
 
-def aoi_from_tile(tile):
+def aoi_from_tile(
+        tile: str | list[str]
+) -> Vector | list[Vector]:
     """
-    Extract one or multiple MGRS tiles from the global Sentinel-2 tiling grid and return it as a :class:`~spatialist.vector.Vector`
-    object.
+    Extract one or multiple MGRS tiles from the global Sentinel-2 tiling
+    grid and return it as a :class:`~spatialist.vector.Vector` object.
     
     Parameters
     ----------
-    tile: str or list[str]
+    tile:
         The MGRS tile ID(s) that should be extracted and returned as a vector object.
         Can also be expressed as <tile ID>_<EPSG code> (e.g. `33TUN_32632`). In this case the geometry
         of the tile is reprojected to the target EPSG code, its corner coordinates rounded to multiples
@@ -96,7 +104,6 @@ def aoi_from_tile(tile):
     
     Returns
     -------
-    spatialist.vector.Vector or list[spatialist.vector.Vector]
         either a single object or a list depending on `tile`
     """
     kml = get_kml()
@@ -137,18 +144,19 @@ def aoi_from_tile(tile):
         return out
 
 
-def description2dict(description):
+def description2dict(
+        description: str
+) -> dict[str, str | int]:
     """
     Convert the HTML description field of the MGRS tile KML file to a dictionary.
     
     Parameters
     ----------
-    description: str
+    description:
         The plain text of the `Description` field
     
     Returns
     -------
-    attrib: dict
         A dictionary with keys 'TILE_ID', 'EPSG', 'MGRS_REF', 'UTM_WKT' and 'LL_WKT'.
         The value of field 'EPSG' is of type integer, all others are strings.
     """
@@ -159,7 +167,11 @@ def description2dict(description):
     return attrib
 
 
-def aoi_from_scene(scene, multi=True, percent=1):
+def aoi_from_scene(
+        scene: ID,
+        multi: bool = True,
+        percent: int | float = 1
+) -> list[dict[str, dict[str, float] | int]]:
     """
     Get processing AOIs for a SAR scene. The MGRS grid requires a SAR
     scene to be geocoded to multiple UTM zones depending on the overlapping
@@ -176,20 +188,19 @@ def aoi_from_scene(scene, multi=True, percent=1):
     
     Parameters
     ----------
-    scene: pyroSAR.drivers.ID
+    scene:
         the SAR scene object
-    multi: bool
+    multi:
         split into multiple AOIs per overlapping UTM zone or just one AOI
         covering the whole scene. In the latter case the best matching UTM
         zone is auto-detected
         (using function :func:`spatialist.auxil.utm_autodetect`).
-    percent: int or float
+    percent:
         the minimum overlap in percent of each AOI with the SAR scene.
         See function :func:`cesard.ancillary.buffer_min_overlap`.
 
     Returns
     -------
-    list[dict]
         a list of dictionaries with keys `extent`, `extent_utm`, `epsg`
     """
     out = []
@@ -238,7 +249,7 @@ def aoi_from_scene(scene, multi=True, percent=1):
     return out
 
 
-def multipolygon2polygon(wkt):
+def multipolygon2polygon(wkt: str) -> str:
     """
     Convert a MultiPolygon WKT with one Polygon to a simple Polygon WKT.
     The Sentinel-2 KML grid file stores all geometries as MultiPolygons.
@@ -249,12 +260,11 @@ def multipolygon2polygon(wkt):
     
     Parameters
     ----------
-    wkt: str
+    wkt:
         A geometry WKT representation.
 
     Returns
     -------
-    str
         the output WKT geometry. Either the original geometry or
         a Polygon extracted from a single-Polygon MultiPolygon.
     """
@@ -272,23 +282,26 @@ def multipolygon2polygon(wkt):
     return wkt
 
 
-def wkt2vector_regrid(wkt, epsg_in, epsg_out=None):
+def wkt2vector_regrid(
+        wkt: str,
+        epsg_in: int,
+        epsg_out: int | None = None
+) -> Vector:
     """
     Convert a WKT geometry to a :class:`spatialist.vector.Vector` object and
     optionally reproject and regrid it.
 
     Parameters
     ----------
-    wkt: str
+    wkt:
         the WKT string
-    epsg_in: int
+    epsg_in:
         the EPSG code for the CRS of `wkt`
-    epsg_out: int or None
+    epsg_out:
         and optional target CRS to reproject the geometry
 
     Returns
     -------
-    spatialist.vector.Vector
         the geometry object
     
     See Also
