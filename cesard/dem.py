@@ -2,36 +2,41 @@ import os
 import re
 import itertools
 from getpass import getpass
+from pyroSAR.drivers import ID
 from pyroSAR.auxdata import dem_autoload, dem_create
 from pyroSAR.ancillary import Lock
 import cesard.tile_extraction as tile_ex
 from cesard.ancillary import generate_unique_id, get_max_ext, vrt_add_overviews, get_tmp_name
-from spatialist import bbox, intersect
+from spatialist.vector import bbox, intersect, Vector
+from typing import Literal
 import logging
 
 log = logging.getLogger('cesard')
 
 
-def authenticate(dem_type, username=None, password=None):
+def authenticate(
+        dem_type: str,
+        username: str | None = None,
+        password: str | None = None
+) -> tuple[str | None, str | None]:
     """
     Query the username and password. If None, environment variables DEM_USER and DEM_PASS are read.
     If they are also None, the user is queried interactively.
     
     Parameters
     ----------
-    dem_type: str
+    dem_type:
         the DEM type. Needed for determining whether authentication is needed.
-    username: str or None
+    username:
         The username for accessing the DEM tiles. If None and authentication is required
         for the selected DEM type, the environment variable 'DEM_USER' is read.
         If this is not set, the user is prompted interactively to provide credentials.
-    password: str or None
+    password:
         The password for accessing the DEM tiles.
         If None: same behavior as for username but with env. variable 'DEM_PASS'.
 
     Returns
     -------
-    tuple[str or None]
         the username and password
     """
     dems_auth = ['Copernicus 10m EEA DEM',
@@ -50,8 +55,15 @@ def authenticate(dem_type, username=None, password=None):
     return username, password
 
 
-def mosaic(geometry, dem_type, outname, tr=None,
-           username=None, password=None, threads=4):
+def mosaic(
+        geometry: Vector,
+        dem_type: str,
+        outname: str,
+        tr: None | tuple[int | float, int | float] = None,
+        username: str | None = None,
+        password: str | None = None,
+        threads: int = 4
+) -> None:
     """
     Create a new scene-specific DEM mosaic GeoTIFF file.
     Makes use of :func:`pyroSAR.auxdata.dem_autoload` and
@@ -59,25 +71,25 @@ def mosaic(geometry, dem_type, outname, tr=None,
     
     Parameters
     ----------
-    geometry: spatialist.vector.Vector
+    geometry:
         The geometry to be covered by the mosaic. The geometry's CRS is
         used as target CRS.
-    dem_type: str
+    dem_type:
         The DEM type.
-    outname: str
+    outname:
         The name of the mosaic.
-    tr: None or tuple[int or float]
+    tr:
         the target resolution as (xres, yres) in units of the target CRS.
-    username: str or None
+    username:
         The username for accessing the DEM tiles. If None and authentication
         is required for the selected DEM type, the environment variable
         'DEM_USER' is read. If this is not set, the user is prompted
         interactively to provide credentials.
-    password: str or None
+    password:
         The password for accessing the DEM tiles.
         If None: same behavior as for username but with env. variable
         'DEM_PASS'.
-    threads: int
+    threads:
         The number of threads to pass to :func:`pyroSAR.auxdata.dem_create`.
     """
     epsg = geometry.getProjection('epsg')
@@ -108,34 +120,40 @@ def mosaic(geometry, dem_type, outname, tr=None,
             geometry = None
 
 
-def prepare(scene, dem_type, mode, dir_out, tr=None,
-            username=None, password=None):
+def prepare(
+        scene: ID,
+        dem_type: str,
+        mode: Literal['single-4326', 'multi-UTM'],
+        dir_out: str,
+        tr: None | tuple[int | float, int | float] = None,
+        username: str | None = None,
+        password: str | None = None
+) -> list[str]:
     """
     Prepare DEM files for SAR processing.
 
     Parameters
     ----------
-    scene: pyroSAR.drivers.ID
+    scene:
         the SAR product
-    dem_type: str
+    dem_type:
         the DEM type
-    mode: {single-4326, multi-UTM}
+    mode:
         the DEM preparation mode (depends on the requirements of the used SAR processor)
-    dir_out: str
+    dir_out:
         the destination directory
-    tr: tuple(int or float) or None
+    tr:
         the target resolution in meters as (x, y). Only applies to mode `multi-UTM`.
-    username: str or None
+    username:
         The username for accessing the DEM tiles. If None and authentication is required
         for the selected DEM type, the environment variable 'DEM_USER' is read.
         If this is not set, the user is prompted interactively to provide credentials.
-    password: str or None
+    password:
         The password for accessing the DEM tiles.
         If None: same behavior as for username but with env. variable 'DEM_PASS'.
 
     Returns
     -------
-    List[str]
         the names of the newly created DEM files.
     """
     dem_type_lookup = {'Copernicus 10m EEA DEM': 'EEA10',
@@ -189,40 +207,49 @@ def prepare(scene, dem_type, mode, dir_out, tr=None,
     return fname_dem
 
 
-def retile(vector, dem_type, dem_dir, wbm_dir, dem_strict=True,
-           tilenames=None, threads=None, username=None, password=None,
-           lock_timeout=1200):
+def retile(
+        vector: Vector,
+        dem_type: str,
+        dem_dir: str | None,
+        wbm_dir: str | None,
+        dem_strict: bool = True,
+        tilenames: list[str] | None = None,
+        threads: int | None = None,
+        username: str | None = None,
+        password: str | None = None,
+        lock_timeout: int = 1200
+) -> None:
     """
     Download and retile DEM and WBM tiles to MGRS.
     Including re-projection and vertical datum conversion.
 
     Parameters
     ----------
-    vector: spatialist.vector.Vector
+    vector:
         The vector object for which to prepare the DEM and WBM tiles.
         CRS must be EPSG:4236.
-    dem_type: str
+    dem_type:
         The DEM type.
-    dem_dir: str or None
+    dem_dir:
         The DEM target directory. DEM preparation can be skipped if set to None.
-    wbm_dir: str or None
+    wbm_dir:
         The WBM target directory. WBM preparation can be skipped if set to None
-    dem_strict: bool
+    dem_strict:
         strictly only create DEM tiles in the native CRS of the MGRS tile or
         also allow reprojection to ensure full coverage of the vector object in every CRS.
-    tilenames: list[str] or None
+    tilenames:
         an optional list of MGRS tile names. Default None: process all overalapping tiles.
-    threads: int or None
+    threads:
         The number of threads to pass to :func:`pyroSAR.auxdata.dem_create`.
         Default `None`: use the value of `GDAL_NUM_THREADS` without modification.
-    username: str or None
+    username:
         The username for accessing the DEM tiles. If None and authentication is required
         for the selected DEM type, the environment variable 'DEM_USER' is read.
         If this is not set, the user is prompted interactively to provide credentials.
-    password: str or None
+    password:
         The password for accessing the DEM tiles.
         If None: same behavior as for username but with env. variable 'DEM_PASS'.
-    lock_timeout: int
+    lock_timeout:
         how long to wait to acquire a lock on created files?
 
     Examples
@@ -387,35 +414,41 @@ def retile(vector, dem_type, dem_dir, wbm_dir, dem_strict=True,
                                creationOptions=create_options)
 
 
-def to_mgrs(tile, dst, dem_type, overviews, tr, format='COG',
-            create_options=None, threads=None, pbar=False):
+def to_mgrs(
+        tile: str,
+        dst: str,
+        dem_type: str,
+        overviews: list[int],
+        tr: tuple[int | float, int | float],
+        format: str = 'COG',
+        create_options: list[str] | None = None,
+        threads: int | None = None,
+        pbar: bool = False
+) -> None:
     """
     Create an MGRS-tiled DEM file.
     
     Parameters
     ----------
-    tile: str
+    tile:
         the MGRS tile ID
-    dst: str
+    dst:
         the destination file name
-    dem_type: str
+    dem_type:
         The DEM type.
-    overviews: list[int]
+    overviews:
         The overview levels
-    tr: tuple[int or float]
+    tr:
         the target resolution as (x, y)
-    format: str
+    format:
         the output file format
-    create_options: list[str] or None
+    create_options:
         additional creation options to be passed to :func:`spatialist.auxil.gdalwarp`.
-    threads: int or None
+    threads:
         The number of threads to pass to :func:`pyroSAR.auxdata.dem_create`.
         Default `None`: use the value of `GDAL_NUM_THREADS` without modification.
-    pbar: bool
-
-    Returns
-    -------
-
+    pbar:
+        add a progress bar?
     """
     if dem_type == 'GETASSE30':
         geoid_convert = False

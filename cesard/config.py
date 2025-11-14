@@ -1,7 +1,11 @@
 import os
 
 
-def keyval_check(key: str, val: str, allowed_keys: list[str]) -> str | None:
+def keyval_check(
+        key: str,
+        val: str,
+        allowed_keys: list[str]
+) -> str | None:
     """
     Check and clean up key,value pairs while parsing a config file.
     
@@ -24,17 +28,21 @@ def keyval_check(key: str, val: str, allowed_keys: list[str]) -> str | None:
     return val
 
 
-def validate_options(k, v, options):
+def validate_options(
+        k: str,
+        v: str,
+        options: dict[str, list[str]]
+) -> None:
     """
     Validate a configuration option against a set of allowed options.
     
     Parameters
     ----------
-    k: str
+    k:
         the configuration key
-    v: str
+    v:
         the configuration value
-    options: dict[str, list[str]]
+    options:
         the configuration options
 
     Returns
@@ -51,15 +59,18 @@ def validate_options(k, v, options):
         assert v in options[k], msg.format(k, options[k], v)
 
 
-def validate_value(k, v):
+def validate_value(
+        k: str,
+        v: str | None | list[str]
+) -> None:
     """
     Validate the value of a configuration option.
     
     Parameters
     ----------
-    k: str
+    k:
         the configuration key
-    v: Any
+    v:
         the configuration value
 
     Returns

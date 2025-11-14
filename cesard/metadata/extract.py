@@ -1,35 +1,38 @@
-import os
 import re
 import json
-from lxml import etree
 import numpy as np
 from spatialist import Raster
 from spatialist.auxil import crsConvert
 from spatialist.vector import Vector
 from osgeo import gdal, ogr
+from typing import Any
 
 gdal.UseExceptions()
 
 
-def vec_from_srccoords(coord_list, crs, layername='polygon'):
+def vec_from_srccoords(
+        coord_list: list[list[tuple[float, float]]],
+        crs: int | str,
+        layername: str = 'polygon'
+) -> Vector:
     """
     Creates a single :class:`~spatialist.vector.Vector` object from a list
     of footprint coordinates of source scenes.
     
     Parameters
     ----------
-    coord_list: list[list[tuple[float]]]
+    coord_list:
         List containing for each source scene a list of coordinate pairs as
         retrieved from the metadata stored in an :class:`~pyroSAR.drivers.ID`
         object.
-    crs: int or str
+    crs:
         the coordinate reference system of the provided coordinates.
-    layername: str
+    layername:
         the layer name of the output vector object
     
     Returns
     -------
-    spatialist.vector.Vector
+        the vector object
     """
     srs = crsConvert(crs, 'osr')
     pts = ogr.Geometry(ogr.wkbMultiPoint)
@@ -48,51 +51,19 @@ def vec_from_srccoords(coord_list, crs, layername='polygon'):
     return vec
 
 
-def get_src_meta(sid):
-    """
-    Retrieve the manifest and annotation XML data of a scene as a dictionary using an :class:`pyroSAR.drivers.ID`
-    object.
-    
-    Parameters
-    ----------
-    sid:  pyroSAR.drivers.ID
-        A pyroSAR :class:`~pyroSAR.drivers.ID` object generated with e.g. :func:`pyroSAR.drivers.identify`.
-    
-    Returns
-    -------
-    dict
-        A dictionary containing the parsed `etree.ElementTree` objects for the manifest and annotation XML files.
-    """
-    files = sid.findfiles(r'^s1[abcd].*-[vh]{2}-.*\.xml$')
-    pols = list(set([re.search('[vh]{2}', os.path.basename(a)).group() for a in files]))
-    annotation_files = list(filter(re.compile(pols[0]).search, files))
-    
-    a_files_base = [os.path.basename(a) for a in annotation_files]
-    swaths = [re.search('-(iw[1-3]*|ew[1-5]*|s[1-6])', a).group(1) for a in a_files_base]
-    
-    annotation_dict = {}
-    for s, a in zip(swaths, annotation_files):
-        annotation_dict[s.upper()] = etree.fromstring(sid.getFileObj(a).getvalue())
-    
-    with sid.getFileObj(sid.findfiles('manifest.safe')[0]) as input_man:
-        manifest = etree.fromstring(input_man.getvalue())
-    
-    return {'manifest': manifest,
-            'annotation': annotation_dict}
-
-
-def geometry_from_vec(vectorobject):
+def geometry_from_vec(
+        vectorobject: Vector
+) -> dict[str, Any]:
     """
     Get geometry information for usage in STAC and XML metadata from a :class:`spatialist.vector.Vector` object.
     
     Parameters
     ----------
-    vectorobject: spatialist.vector.Vector
+    vectorobject:
         The vector object to extract geometry information from.
     
     Returns
     -------
-    out: dict
         A dictionary containing the geometry information extracted from the vector object.
     """
     out = {}
@@ -120,74 +91,12 @@ def geometry_from_vec(vectorobject):
     return out
 
 
-def find_in_annotation(annotation_dict, pattern, single=False, out_type='str'):
-    """
-    Search for a pattern in all XML annotation files provided and return a dictionary of results.
-    
-    Parameters
-    ----------
-    annotation_dict: dict
-        A dict of annotation files in the form: {'swath ID': `lxml.etree._Element` object}
-    pattern: str
-        The pattern to search for in each annotation file.
-    single: bool
-        If True, the results found in each annotation file are expected to be the same and therefore only a single
-        value will be returned instead of a dict. If the results differ, an error is raised. Default is False.
-    out_type: str
-        Output type to convert the results to. Can be one of the following:
-        
-        - 'str' (default)
-        - 'float'
-        - 'int'
-    
-    Returns
-    -------
-    out: dict
-        A dictionary of the results containing a list for each of the annotation files. E.g.,
-        {'swath ID': list[str or float or int]}
-    """
-    out = {}
-    for s, a in annotation_dict.items():
-        swaths = [x.text for x in a.findall('.//swathProcParams/swath')]
-        items = a.findall(pattern)
-        
-        parent = items[0].getparent().tag
-        if parent in ['azimuthProcessing', 'rangeProcessing']:
-            for i, val in enumerate(items):
-                out[swaths[i]] = val.text
-        else:
-            out[s] = [x.text for x in items]
-            if len(out[s]) == 1:
-                out[s] = out[s][0]
-    
-    def _convert(obj, type):
-        if isinstance(obj, list):
-            return [_convert(x, type) for x in obj]
-        elif isinstance(obj, str):
-            if type == 'float':
-                return float(obj)
-            if type == 'int':
-                return int(obj)
-    
-    if out_type != 'str':
-        for k, v in list(out.items()):
-            out[k] = _convert(v, out_type)
-    
-    err_msg = 'Search result for pattern "{}" expected to be the same in all annotation files.'
-    if single:
-        val = list(out.values())[0]
-        for k in out:
-            if out[k] != val:
-                raise RuntimeError(err_msg.format(pattern))
-        if out_type != 'str':
-            return _convert(val, out_type)
-        else:
-            return val
-    else:
-        return out
-
-
-def calc_enl(tif, block_size=30, return_arr=False, decimals=2):
+def calc_enl(
+        tif: str,
+        block_size: int = 30,
+        return_arr: bool = False,
+        decimals: int = 2
+) -> float | np.ndarray | None:
     """
     Calculate the Equivalent Number of Looks (ENL) for a linear-scaled backscatter
     measurement GeoTIFF file. The calculation is performed block-wise for the
@@ -195,15 +104,15 @@ def calc_enl(tif, block_size=30, return_arr=False, decimals=2):
     
     Parameters
     ----------
-    tif: str
+    tif:
         The path to a linear-scaled backscatter measurement GeoTIFF file.
-    block_size: int, optional
+    block_size:
         The block size to use for the calculation. Remainder pixels are discarded,
          if the array dimensions are not evenly divisible by the block size.
          Default is 30, which calculates ENL for 30x30 pixel blocks.
-    return_arr: bool, optional
+    return_arr:
         If True, the calculated ENL array is returned. Default is False.
-    decimals: int, optional
+    decimals:
         Number of decimal places to round the calculated ENL value to. Default is 2.
     
     Raises
@@ -213,7 +122,6 @@ def calc_enl(tif, block_size=30, return_arr=False, decimals=2):
     
     Returns
     -------
-    float or None or numpy.ndarray
         If `return_enl_arr=True`, an array of ENL values is returned. Otherwise,
         the median ENL value is returned. If the ENL array contains only NaN and
         `return_enl_arr=False`, the return value is `None`.
@@ -256,15 +164,18 @@ def calc_enl(tif, block_size=30, return_arr=False, decimals=2):
         return out_arr
 
 
-def calc_performance_estimates(files, decimals=2):
+def calc_performance_estimates(
+        files: list[str],
+        decimals: int = 2
+):
     """
     Calculates the performance estimates specified in CARD4L NRB 1.6.9 for all noise power images if available.
     
     Parameters
     ----------
-    files: list[str]
+    files:
         List of paths pointing to the noise power images the estimates should be calculated for.
-    decimals: int, optional
+    decimals:
         Number of decimal places to round the calculated values to. Default is 2.
     
     Returns
@@ -288,7 +199,7 @@ def calc_performance_estimates(files, decimals=2):
     return out
 
 
-def get_header_size(tif):
+def get_header_size(tif: str) -> int:
     """
     Gets the header size of a GeoTIFF file in bytes.
     The code used in this function and its helper function `_get_block_offset` were extracted from the following
@@ -310,12 +221,12 @@ def get_header_size(tif):
     
     Parameters
     ----------
-    tif: str
+    tif:
         A path to a GeoTIFF file of the currently processed ARD product.
 
     Returns
     -------
-    header_size: int
+    header_size:
         The size of all IFD headers of the GeoTIFF file in bytes.
     """
     

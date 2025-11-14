@@ -1,6 +1,6 @@
 import os
 import re
-from spatialist import Raster
+from spatialist import Raster, Vector
 from spatialist.envi import HDRobject
 from spatialist.ancillary import finder
 from pyroSAR import identify, identify_many
@@ -14,22 +14,25 @@ import logging
 log = logging.getLogger('cesard')
 
 
-def find_datasets(scene, outdir, epsg):
+def find_datasets(
+        scene: str,
+        outdir: str,
+        epsg: int
+) -> dict[str, str] | None:
     """
     Find processed datasets for a SAR scene.
 
     Parameters
     ----------
-    scene: str
+    scene:
         the file name of the SAR scene
-    outdir: str
+    outdir:
         the output directory in which to search for results
-    epsg: int
+    epsg:
         the EPSG code defining the output projection of the processed products.
 
     Returns
     -------
-    dict or None
         Either None if no datasets were found or a dictionary with the
         following keys and values pointing to the file names
         (polarization-specific keys depending on product availability):
@@ -123,30 +126,43 @@ def version_dict() -> dict[str, str]:
 
 ###############################################################################
 
-def geo(*src, dst, workflow, spacing, crs, geometry=None, buffer=0.01,
-        export_extra=None, standard_grid_origin_x=0, standard_grid_origin_y=0,
-        dem, dem_resampling_method='BILINEAR_INTERPOLATION',
-        img_resampling_method='BILINEAR_INTERPOLATION', gpt_args=None, **bands):
+def geo(
+        *src: str | None,
+        dst: str,
+        workflow: str,
+        spacing: int | float,
+        crs: int | float,
+        geometry: dict[str, int | float] | Vector | str | None = None,
+        buffer: int | float = 0.01,
+        export_extra: list[str] | None = None,
+        standard_grid_origin_x: int | float = 0,
+        standard_grid_origin_y: int | float = 0,
+        dem: str,
+        dem_resampling_method: str = 'BILINEAR_INTERPOLATION',
+        img_resampling_method: str = 'BILINEAR_INTERPOLATION',
+        gpt_args: list[str] | None = None,
+        **bands
+) -> None:
     """
     Range-Doppler geocoding.
 
     Parameters
     ----------
-    src: str or None
+    src:
         variable number of input scene file names
-    dst: str
+    dst:
         the file name of the target scene. Format is BEAM-DIMAP.
-    workflow: str
+    workflow:
         the target XML workflow file name
-    spacing: int or float
+    spacing:
         the target pixel spacing in meters
-    crs: int or str
+    crs:
         the target coordinate reference system
-    geometry: dict or spatialist.vector.Vector or str or None
+    geometry:
         a vector geometry to limit the target product's extent
-    buffer: int or float
+    buffer:
         an additional buffer in degrees to add around `geometry`
-    export_extra: list[str] or None
+    export_extra:
         a list of ancillary layers to write. Supported options:
 
          - DEM
@@ -154,26 +170,23 @@ def geo(*src, dst, workflow, spacing, crs, geometry=None, buffer=0.01,
          - layoverShadowMask
          - localIncidenceAngle
          - projectedLocalIncidenceAngle
-    standard_grid_origin_x: int or float
+    standard_grid_origin_x:
         the X coordinate for pixel alignment
-    standard_grid_origin_y: int or float
+    standard_grid_origin_y:
         the Y coordinate for pixel alignment
-    dem: str
+    dem:
         the DEM file
-    dem_resampling_method: str
+    dem_resampling_method:
         the DEM resampling method
-    img_resampling_method: str
+    img_resampling_method:
         the SAR image resampling method
-    gpt_args: list[str] or None
+    gpt_args:
         a list of additional arguments to be passed to the gpt call
 
         - e.g. ``['-x', '-c', '2048M']`` for increased tile cache size and intermediate clearing
-    bands
+    bands:
         band ids for the input scenes in `src` as lists with keys bands<index>,
         e.g., ``bands1=['NESZ_VV'], bands2=['Gamma0_VV'], ...``
-
-    Returns
-    -------
 
     See Also
     --------
@@ -227,27 +240,30 @@ def geo(*src, dst, workflow, spacing, crs, geometry=None, buffer=0.01,
         gpt_args=gpt_args)
 
 
-def gsr(src, dst, workflow, src_sigma=None, gpt_args=None):
+def gsr(
+        src: str,
+        dst: str,
+        workflow: str,
+        src_sigma: str | None = None,
+        gpt_args: list[str] | None = None
+) -> None:
     """
     Gamma-sigma ratio computation for either ellipsoidal or RTC sigma nought.
 
     Parameters
     ----------
-    src: str
+    src:
         the file name of the source scene. Both gamma and sigma bands are expected unless `src_sigma` is defined.
-    dst: str
+    dst:
         the file name of the target scene. Format is BEAM-DIMAP.
-    workflow: str
+    workflow:
         the output SNAP XML workflow filename.
-    src_sigma: str or None
+    src_sigma:
         the optional file name of a second source product from which to read the sigma band.
-    gpt_args: list[str] or None
+    gpt_args:
         a list of additional arguments to be passed to the gpt call
 
         - e.g. ``['-x', '-c', '2048M']`` for increased tile cache size and intermediate clearing
-
-    Returns
-    -------
 
     """
     scene = identify(src)
@@ -292,33 +308,38 @@ def gsr(src, dst, workflow, src_sigma=None, gpt_args=None):
         gpt_args=gpt_args)
 
 
-def mli(src, dst, workflow, spacing=None, rlks=None, azlks=None, gpt_args=None):
+def mli(
+        src: str,
+        dst: str,
+        workflow: str,
+        spacing: int | float = None,
+        rlks: int | None = None,
+        azlks: int | None = None,
+        gpt_args: list[str] | None = None
+) -> None:
     """
     Multi-looking.
 
     Parameters
     ----------
-    src: str
+    src:
         the file name of the source scene
-    dst: str
+    dst:
         the file name of the target scene. Format is BEAM-DIMAP.
-    workflow: str
+    workflow:
         the output SNAP XML workflow filename.
-    spacing: int or float
+    spacing:
         the target pixel spacing for automatic determination of looks
         using function :func:`pyroSAR.ancillary.multilook_factors`.
         Overridden by arguments `rlks` and `azlks` if they are not None.
-    rlks: int or None
+    rlks:
         the number of range looks.
-    azlks: int or None
+    azlks:
         the number of azimuth looks.
-    gpt_args: list[str] or None
+    gpt_args:
         a list of additional arguments to be passed to the gpt call
 
         - e.g. ``['-x', '-c', '2048M']`` for increased tile cache size and intermediate clearing
-
-    Returns
-    -------
 
     See Also
     --------
@@ -347,17 +368,20 @@ def mli(src, dst, workflow, spacing=None, rlks=None, azlks=None, gpt_args=None):
             gpt_args=gpt_args)
 
 
-def postprocess(src, clean_edges=True, clean_edges_pixels=4):
+def postprocess(
+        src: str,
+        clean_edges: bool = True,
+        clean_edges_pixels: int = 4):
     """
     Performs edge cleaning and sets the nodata value in the output ENVI HDR files.
 
     Parameters
     ----------
-    src: str
+    src:
         the file name of the source scene. Format is BEAM-DIMAP.
-    clean_edges: bool
+    clean_edges:
         perform edge cleaning?
-    clean_edges_pixels: int
+    clean_edges_pixels:
         the number of pixels to erode during edge cleaning.
 
     Returns
@@ -375,40 +399,44 @@ def postprocess(src, clean_edges=True, clean_edges_pixels=4):
                 hdr.write(hdrfile)
 
 
-def rtc(src, dst, workflow, dem, dem_resampling_method='BILINEAR_INTERPOLATION',
-        sigma0=True, scattering_area=True, dem_oversampling_multiple=2,
-        gpt_args=None):
+def rtc(
+        src: str,
+        dst: str,
+        workflow: str,
+        dem: str,
+        dem_resampling_method: str = 'BILINEAR_INTERPOLATION',
+        sigma0: bool = True,
+        scattering_area: bool = True,
+        dem_oversampling_multiple: int = 2,
+        gpt_args: list[str] | None = None
+) -> None:
     """
     Radiometric Terrain Flattening.
     
     Parameters
     ----------
-    src: str
+    src:
         the file name of the source scene
-    dst: str
+    dst:
         the file name of the target scene. Format is BEAM-DIMAP.
-    workflow: str
+    workflow:
         the output SNAP XML workflow filename.
-    dem: str
+    dem:
         the input DEM file name.
-    dem_resampling_method: str
+    dem_resampling_method:
         the DEM resampling method.
-    sigma0: bool
+    sigma0:
         output sigma0 RTC backscatter?
-    scattering_area: bool
+    scattering_area:
         output scattering area image?
-    dem_oversampling_multiple: int
+    dem_oversampling_multiple:
         a factor to multiply the DEM oversampling factor computed by SNAP.
         The SNAP default of 1 has been found to be insufficient with stripe
         artifacts remaining in the image.
-    gpt_args: list[str] or None
+    gpt_args:
         a list of additional arguments to be passed to the gpt call
         
         - e.g. ``['-x', '-c', '2048M']`` for increased tile cache size and intermediate clearing
-    
-    Returns
-    -------
-
     """
     scene = identify(src)
     wf = parse_recipe('blank')
@@ -445,7 +473,12 @@ def rtc(src, dst, workflow, dem, dem_resampling_method='BILINEAR_INTERPOLATION',
         gpt_args=gpt_args)
 
 
-def sgr(src, dst, workflow, src_gamma=None, gpt_args=None):
+def sgr(
+        src: str,
+        dst: str,
+        workflow: str,
+        src_gamma: str | None = None,
+        gpt_args: list[str] | None = None):
     """
     Sigma-gamma ratio computation.
 

@@ -2,21 +2,27 @@ import os
 import re
 import inspect
 from dateutil.parser import parse as dateparse
-from datetime import timedelta
+from datetime import datetime, timedelta
 from spatialist.vector import Vector, crsConvert, wkt2vector
 import asf_search as asf
-from pyroSAR import ID
+from pyroSAR.drivers import ID
 from cesard.ancillary import date_to_utc, combine_polygons
 from cesard.tile_extraction import aoi_from_tile, tile_from_aoi
+from typing import Any, Literal
 import logging
 
 log = logging.getLogger('cesard')
 
+SENSOR = Literal["S1A", "S1B", "S1C", "S1D"]
+PRODUCT = Literal["GRD", "SLC"]
+ACQUISITION_MODE = Literal["IW", "EW", "SM"]
+
 
 class ASF(ID):
     """
-    Simple SAR metadata handler for scenes in the ASF archive. The interface is consistent with the driver classes in
-    :mod:`pyroSAR.drivers` but does not implement the full functionality due to limited content of the CMR
+    Simple SAR metadata handler for scenes in the ASF archive. The interface
+    is consistent with the driver classes in :mod:`pyroSAR.drivers` but does
+    not implement the full functionality due to limited content of the CMR
     metadata catalog. Registered attributes:
     
     - acquisition_mode
@@ -33,18 +39,21 @@ class ASF(ID):
     - stop
     """
     
-    def __init__(self, meta):
+    def __init__(
+            self,
+            meta: dict[str, Any]
+    ):
         self.scene = meta['properties']['url']
         self._meta = meta
         self.meta = self.scanMetadata()
         super(ASF, self).__init__(self.meta)
     
-    def __lt__(self, other):
+    def __lt__(self, other: Any) -> bool:
         if not isinstance(other, ASF):
             return NotImplemented
         return self.outname_base() < other.outname_base()
     
-    def scanMetadata(self):
+    def scanMetadata(self) -> dict[str, int | float | str | datetime | list[tuple[float, float]]]:
         meta = dict()
         meta['acquisition_mode'] = self._meta['properties']['beamModeType']
         meta['coordinates'] = [tuple(x) for x in self._meta['geometry']['coordinates'][0]]
@@ -84,8 +93,16 @@ class ASFArchive(object):
         return
     
     @staticmethod
-    def select(sensor=None, product=None, acquisition_mode=None, mindate=None,
-               maxdate=None, vectorobject=None, date_strict=True, return_value='scene'):
+    def select(
+            sensor: SENSOR | None = None,
+            product: PRODUCT | None = None,
+            acquisition_mode: ACQUISITION_MODE | None = None,
+            mindate: str | datetime | None = None,
+            maxdate: str | datetime | None = None,
+            vectorobject: Vector | None = None,
+            date_strict: bool = True,
+            return_value: str | list[str] = 'scene'
+    ) -> list[str | tuple[str] | ASF]:
         """
         Select scenes from the ASF catalog. This is a simple wrapper around the function
         :func:`~cesard.search.asf_select` to be consistent with the interfaces of the
@@ -93,43 +110,50 @@ class ASFArchive(object):
 
         Parameters
         ----------
-        sensor: str or list[str] or None
-            S1A or S1B
-        product: str or list[str] or None
-            GRD or SLC
-        acquisition_mode: str or list[str] or None
-            IW, EW or SM
-        mindate: str or datetime.datetime or None
+        sensor:
+            the satellite
+        product:
+            the product type
+        acquisition_mode:
+            the satellite acquisition mode
+        mindate:
             the minimum acquisition date; timezone-unaware dates are interpreted as UTC.
-        maxdate: str or datetime.datetime or None
+        maxdate:
             the maximum acquisition date; timezone-unaware dates are interpreted as UTC.
-        vectorobject: spatialist.vector.Vector or None
+        vectorobject:
             a geometry with which the scenes need to overlap. The object may only contain one feature.
-        date_strict: bool
+        date_strict:
             treat dates as strict limits or also allow flexible limits to incorporate scenes
             whose acquisition period overlaps with the defined limit?
             
             - strict: start >= mindate & stop <= maxdate
             - not strict: stop >= mindate & start <= maxdate
-        return_value: str or list[str]
+        return_value:
             the metadata return value; see :func:`~cesard.search.asf_select` for details
+        
+        Returns
+        -------
+            the scene metadata attributes as specified with `return_value`;
+            see :func:`~cesard.search.asf_select` for details
         
         See Also
         --------
         asf_select
-        
-        Returns
-        -------
-        list[str or tuple[str] or ASF]
-            the scene metadata attributes as specified with `return_value`;
-            see :func:`~cesard.search.asf_select` for details
         """
         return asf_select(sensor, product, acquisition_mode, mindate, maxdate, vectorobject,
                           return_value=return_value, date_strict=date_strict)
 
 
-def asf_select(sensor=None, product=None, acquisition_mode=None, mindate=None,
-               maxdate=None, vectorobject=None, date_strict=True, return_value='scene'):
+def asf_select(
+        sensor: SENSOR | None = None,
+        product: PRODUCT | None = None,
+        acquisition_mode: ACQUISITION_MODE | None = None,
+        mindate: str | datetime | None = None,
+        maxdate: str | datetime | None = None,
+        vectorobject: Vector | None = None,
+        date_strict: bool = True,
+        return_value: str | list[str] = 'scene'
+) -> list[str | tuple[str] | ASF]:
     """
     Search scenes in the Alaska Satellite Facility (ASF) data catalog.
     This is a simple interface to the
@@ -137,41 +161,40 @@ def asf_select(sensor=None, product=None, acquisition_mode=None, mindate=None,
     
     Parameters
     ----------
-    sensor: str or None
-        S1A|S1B|S1C|S1D
-    product: str or None
-        GRD|SLC
-    acquisition_mode: str or None
-        IW|EW|SM
-    mindate: str or datetime.datetime or None
+    sensor:
+        the satellite
+    product:
+        the product type
+    acquisition_mode:
+        the satellite acquisition mode
+    mindate:
         the minimum acquisition date; timezone-unaware dates are interpreted as UTC.
-    maxdate: str or datetime.datetime or None
+    maxdate:
         the maximum acquisition date; timezone-unaware dates are interpreted as UTC.
-    vectorobject: spatialist.vector.Vector or None
+    vectorobject:
         a geometry with which the scenes need to overlap. The object may only contain one feature.
-    date_strict: bool
+    date_strict:
         treat dates as strict limits or also allow flexible limits to incorporate scenes
         whose acquisition period overlaps with the defined limit?
         
         - strict: start >= mindate & stop <= maxdate
         - not strict: stop >= mindate & start <= maxdate
     
-    return_value: str or List[str]
+    return_value:
         the query return value(s). Options:
         
-        - acquisition_mode: the sensor's acquisition mode, e.g., IW, EW, SM
+        - acquisition_mode: the sensor's acquisition mode
         - frameNumber: the frame or datatake number
         - geometry_wkb: the scene's footprint geometry formatted as WKB
         - geometry_wkt: the scene's footprint geometry formatted as WKT
         - mindate: the acquisition start datetime in UTC formatted as YYYYmmddTHHMMSS
         - maxdate: the acquisition end datetime in UTC formatted as YYYYmmddTHHMMSS
-        - product: the product type, e.g., SLC, GRD
+        - product: the product type
         - scene: the scene's storage location path (default)
-        - sensor: the satellite platform, e.g., S1A or S1B
+        - sensor: the satellite platform
 
     Returns
     -------
-    list[str or tuple[str] or ASF]
         the scene metadata attributes as specified with `return_value`; the return type
         is a list of strings, tuples, or :class:`~cesard.search.ASF` objects depending on
         whether `return_type` is of type string, list or :class:`~cesard.search.ASF`.
@@ -255,7 +278,13 @@ def asf_select(sensor=None, product=None, acquisition_mode=None, mindate=None,
     return out
 
 
-def scene_select(archive, aoi_tiles=None, aoi_geometry=None, return_value='scene', **kwargs):
+def scene_select(
+        archive: Any,
+        aoi_tiles: list[str] | None = None,
+        aoi_geometry: str | None = None,
+        return_value: str | list[str] = 'scene',
+        **kwargs: Any
+) -> tuple[list[str | tuple[str]], list[str]]:
     """
     Central scene search utility. Selects scenes from a database and returns their file names
     together with the MGRS tile names for which to process ARD products.
@@ -286,16 +315,17 @@ def scene_select(archive, aoi_tiles=None, aoi_geometry=None, return_value='scene
     
     Parameters
     ----------
-    archive: pyroSAR.drivers.Archive or s1ard.search.STACArchive or s1ard.search.STACParquetArchive or ASFArchive
-        an open scene archive connection
-    aoi_tiles: list[str] or None
+    archive:
+        an open scene archive connection. pyroSAR.drivers.Archive or s1ard.search.STACArchive
+        or s1ard.search.STACParquetArchive or ASFArchive.
+    aoi_tiles:
         a list of MGRS tile names for spatial search
-    aoi_geometry: str or None
+    aoi_geometry:
         the name of a vector geometry file for spatial search
-    return_value: str or List[str]
+    return_value:
         the query return value(s). Default 'scene': return the scene's storage location path.
         See the documentation of `archive.select` for options.
-    kwargs
+    kwargs:
         further search arguments passed to the `select` method of `archive`.
         The `date_strict` argument has no effect. Whether an ARD product is strictly in the defined
         time range cannot be determined by this function, and it thus has to add a time buffer.
@@ -303,10 +333,10 @@ def scene_select(archive, aoi_tiles=None, aoi_geometry=None, return_value='scene
 
     Returns
     -------
-    tuple[list[str or tuple[str]], list[str]]
+        a tuple containing
     
-     - the list of return values; single value:string, multiple values: tuple
-     - the list of MGRS tiles
+        - the list of return values; single value:string, multiple values: tuple
+        - the list of MGRS tiles
     
     """
     args = kwargs.copy()

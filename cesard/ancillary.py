@@ -28,7 +28,9 @@ T = TypeVar('T')  # any type
 K = TypeVar('K')  # key
 
 
-def check_scene_consistency(scenes):
+def check_scene_consistency(
+        scenes: list[str | pyroSAR.drivers.ID]
+) -> None:
     """
     Check the consistency of a scene selection.
     The following pyroSAR object attributes must be the same:
@@ -36,14 +38,12 @@ def check_scene_consistency(scenes):
      - sensor
      - acquisition_mode
      - product
-     - frameNumber (data take ID)
+     - frameNumber (data take ID for Sentinel-1)
     
     Parameters
     ----------
-    scenes: list[str or pyroSAR.drivers.ID]
-
-    Returns
-    -------
+    scenes:
+        the scene selection
     
     Raises
     ------
@@ -57,7 +57,9 @@ def check_scene_consistency(scenes):
             raise RuntimeError(msg)
 
 
-def check_spacing(spacing):
+def check_spacing(
+        spacing: int | float
+) -> None:
     """
     Check whether the spacing fits into the MGRS tile boundaries.
 
@@ -65,9 +67,6 @@ def check_spacing(spacing):
     ----------
     spacing: int or float
         the target pixel spacing in meters
-
-    Returns
-    -------
 
     """
     # 109800 m is the edge length of one tile.
@@ -82,7 +81,10 @@ def check_spacing(spacing):
                            f'with MGRS tile size and overlaps.\nOptions: {options}')
 
 
-def generate_unique_id(encoded_str, length=4):
+def generate_unique_id(
+        encoded_str: bytes,
+        length: int = 4
+) -> str:
     """
     
     Returns a unique product identifier as a hexadecimal string.
@@ -93,17 +95,16 @@ def generate_unique_id(encoded_str, length=4):
     
     Parameters
     ----------
-    encoded_str: bytes
+    encoded_str:
         A string that should be used to generate a unique id from.
         The string needs to be encoded; e.g.: `'abc'.encode()`.
-    length: int, optional
+    length:
         The desired length of the output string in hexadecimal
         characters (max: 4). Values higher than 4 will be capped
         at 4, since CRC-16 only produces 16 bits.
     
     Returns
     -------
-    p_id: str
         The unique product identifier (upper-case hexadecimal string).
     """
     crc = binascii.crc_hqx(encoded_str, 0xffff)
@@ -114,24 +115,28 @@ def generate_unique_id(encoded_str, length=4):
     return p_id
 
 
-def get_max_ext(geometries, buffer=None, crs=None):
+def get_max_ext(
+        geometries: list[Vector],
+        buffer: float | None = None,
+        crs: str | int | None = None
+) -> dict[str, float]:
     """
     Gets the maximum extent from a list of geometries.
     
     Parameters
     ----------
-    geometries: list[spatialist.vector.Vector]
+    geometries:
         List of :class:`~spatialist.vector.Vector` geometries.
-    buffer: float or None
+    buffer:
         The buffer in units of the geometries' CRS to add to the extent.
-    crs: str or int or None
+    crs:
         The target CRS of the extent. If None (default) the extent is
         expressed in the CRS of the input geometries.
     
     Returns
     -------
-    max_ext: dict
-        The maximum extent of the selected :class:`~spatialist.vector.Vector` geometries including the chosen buffer.
+        The maximum extent of the selected :class:`~spatialist.vector.Vector`
+        geometries including the chosen buffer.
     """
     max_ext = {}
     crs_list = []
@@ -163,13 +168,23 @@ def get_max_ext(geometries, buffer=None, crs=None):
     return max_ext
 
 
-def group_by_attr(items: List[T], key_fn: Callable[[T], K]) -> List[List[T]]:
+def group_by_attr(
+        items: List[T],
+        key_fn: Callable[[T], K]
+) -> List[List[T]]:
     """
     Group items based on a key function.
     
-    :param items: The list of arbitrary items to group.
-    :param key_fn: A function that extracts a key from each item.
-    :returns: A list of groups, where each group is a list of items with the same key.
+    Parameters
+    ----------
+    items:
+        The list of arbitrary items to group.
+    key_fn:
+        A function that extracts a key from each item.
+    
+    Returns
+    -------
+        A list of groups, where each group is a list of items with the same key.
     
     Example
     -------
@@ -188,21 +203,23 @@ def group_by_attr(items: List[T], key_fn: Callable[[T], K]) -> List[List[T]]:
     return list(grouped.values())
 
 
-def group_by_time(scenes, time=3):
+def group_by_time(
+        scenes: list[pyroSAR.drivers.ID | str],
+        time: int | float = 3
+) -> list[list[pyroSAR.drivers.ID]]:
     """
     Group scenes by their acquisition time difference.
 
     Parameters
     ----------
-    scenes:list[pyroSAR.drivers.ID or str]
+    scenes:
         a list of image names
-    time: int or float
+    time:
         a time difference in seconds by which to group the scenes.
         The default of 3 seconds incorporates the overlap between SLCs.
 
     Returns
     -------
-    list[list[pyroSAR.drivers.ID]]
         a list of sub-lists containing the file names of the grouped scenes
     """
     # sort images by time stamp
@@ -226,23 +243,23 @@ def group_by_time(scenes, time=3):
     return groups
 
 
-def vrt_add_overviews(vrt, overviews, resampling='AVERAGE'):
+def vrt_add_overviews(
+        vrt: str,
+        overviews: list[int],
+        resampling: str = 'AVERAGE'
+) -> None:
     """
     Add overviews to an existing VRT file.
     Existing overviews will be overwritten.
 
     Parameters
     ----------
-    vrt: str
+    vrt:
         the VRT file
-    overviews: list[int]
+    overviews:
          the overview levels
-    resampling: str
+    resampling:
         the overview resampling method
-
-    Returns
-    -------
-
     """
     tree = etree.parse(vrt)
     root = tree.getroot()
@@ -255,7 +272,12 @@ def vrt_add_overviews(vrt, overviews, resampling='AVERAGE'):
     tree.write(vrt, pretty_print=True, xml_declaration=False, encoding='utf-8')
 
 
-def buffer_min_overlap(geom1, geom2, percent=1, step=None):
+def buffer_min_overlap(
+        geom1: Vector,
+        geom2: Vector,
+        percent: int | float = 1,
+        step: int | float | None = None
+) -> None:
     """
     Buffer a rectangular geometry to a minimum overlap with a second geometry.
     The geometry is iteratively buffered until the minimum overlap is reached.
@@ -264,19 +286,15 @@ def buffer_min_overlap(geom1, geom2, percent=1, step=None):
 
     Parameters
     ----------
-    geom1: spatialist.vector.Vector
+    geom1:
         the geometry to be buffered
-    geom2: spatialist.vector.Vector
+    geom2:
         the reference geometry to intersect with
-    percent: int or float
+    percent:
         the minimum overlap in percent of `geom1`
-    step: int or float or None
+    step:
         the buffering step size. If None, the step size is 0.1 % of the
         average rectangle corner length.
-
-    Returns
-    -------
-
     """
     geom1_crs = geom1.getProjection('epsg')
     geom2_crs = geom2.getProjection('epsg')
@@ -307,22 +325,25 @@ def buffer_min_overlap(geom1, geom2, percent=1, step=None):
     return bbox(ext3, geom1_crs)
 
 
-def date_to_utc(date, as_datetime=False, str_format='%Y%m%dT%H%M%S'):
+def date_to_utc(
+        date: str | datetime | None,
+        as_datetime: bool = False,
+        str_format: str = '%Y%m%dT%H%M%S'
+) -> str | datetime | None:
     """
     convert a date object to a UTC date string or datetime object.
 
     Parameters
     ----------
-    date: str or datetime or None
+    date:
         the date object to convert; timezone-unaware dates are interpreted as UTC.
-    as_datetime: bool
+    as_datetime:
         return a datetime object instead of a string?
-    str_format: str
+    str_format:
         the output string format (ignored if `as_datetime` is True)
 
     Returns
     -------
-    str or datetime or None
         the date string or datetime object in UTC time zone
     """
     if date is None:
@@ -342,26 +363,31 @@ def date_to_utc(date, as_datetime=False, str_format='%Y%m%dT%H%M%S'):
     return out
 
 
-def buffer_time(start, stop, as_datetime=False, str_format='%Y%m%dT%H%M%S', **kwargs):
+def buffer_time(
+        start: str,
+        stop: str,
+        as_datetime: bool = False,
+        str_format: str = '%Y%m%dT%H%M%S',
+        **kwargs
+) -> tuple[str | datetime, str | datetime]:
     """
     Time range buffering
     
     Parameters
     ----------
-    start: str
+    start:
         the start time date object to convert; timezone-unaware dates are interpreted as UTC.
-    stop: str
+    stop:
         the stop time date object to convert; timezone-unaware dates are interpreted as UTC.
-    as_datetime: bool
+    as_datetime:
         return datetime objects instead of strings?
-    str_format: str
+    str_format:
         the output string format (ignored if `as_datetime` is True)
     kwargs
         time arguments passed to :func:`datetime.timedelta`
 
     Returns
     -------
-    tuple[str | datetime]
         the buffered start and stop time as string or datetime object
     """
     td = timedelta(**kwargs)
@@ -373,13 +399,12 @@ def buffer_time(start, stop, as_datetime=False, str_format='%Y%m%dT%H%M%S', **kw
     return start, stop
 
 
-def get_kml():
+def get_kml() -> str:
     """
     Download the Sentinel-2 MGRS grid KML file. The target folder is ~/cesard.
 
     Returns
     -------
-    str
         the path to the KML file
     """
     remote = ('https://sentiwiki.copernicus.eu/__attachments/1692737/'
@@ -396,19 +421,24 @@ def get_kml():
     return local
 
 
-def compute_hash(file_path, algorithm='sha256', chunk_size=8192, multihash_encode=True):
+def compute_hash(
+        file_path: str,
+        algorithm: str = 'sha256',
+        chunk_size: int = 8192,
+        multihash_encode: bool = True
+) -> str:
     """
     Compute the (multi)hash of a file using the specified algorithm.
 
     Parameters
     ----------
-    file_path: str
+    file_path:
         Path to the file.
-    algorithm: str
+    algorithm:
         Hash algorithm to use (default is 'sha256').
-    chunk_size: int
+    chunk_size:
         Size of chunks to read from the file in bytes (default is 8192).
-    multihash_encode: bool
+    multihash_encode:
         Encode the hash according to the
         `multihash specification <https://github.com/multiformats/multihash>`_
         (default is True)?
@@ -417,7 +447,6 @@ def compute_hash(file_path, algorithm='sha256', chunk_size=8192, multihash_encod
 
     Returns
     -------
-    str
         the hexadecimal hash string of the file.
 
     See Also
@@ -443,7 +472,11 @@ def compute_hash(file_path, algorithm='sha256', chunk_size=8192, multihash_encod
         return hash_func.hexdigest()
 
 
-def datamask(measurement, dm_ras, dm_vec):
+def datamask(
+        measurement: str,
+        dm_ras: str,
+        dm_vec: str
+) -> str | None:
     """
     Create data masks for a given image file.
     The created raster data mask does not contain a simple mask of nodata values.
@@ -457,16 +490,15 @@ def datamask(measurement, dm_ras, dm_vec):
     
     Parameters
     ----------
-    measurement: str
+    measurement:
         the binary image file
-    dm_ras: str
+    dm_ras:
         the name of the raster data mask
-    dm_vec: str
+    dm_vec:
         the name of the vector data mask
 
     Returns
     -------
-    str or None
         `dm_vec` if the vector data mask contains a geometry or None otherwise
     """
     
@@ -528,7 +560,7 @@ def datamask(measurement, dm_ras, dm_vec):
     return out
 
 
-def get_tmp_name(suffix):
+def get_tmp_name(suffix: str) -> str:
     """
     Get the name of a temporary file with defined suffix.
     Files are placed in a subdirectory 'cesard' of the regular
@@ -542,14 +574,19 @@ def get_tmp_name(suffix):
 
     Returns
     -------
-
+        the temporary file name
     """
     tmpdir = os.path.join(tempfile.gettempdir(), 'cesard')
     os.makedirs(tmpdir, exist_ok=True)
     return tempfile.NamedTemporaryFile(suffix=suffix, dir=tmpdir).name
 
 
-def combine_polygons(vector, crs=4326, multipolygon=False, layer_name='combined'):
+def combine_polygons(
+        vector: Vector | list[Vector],
+        crs: int | str = 4326,
+        multipolygon: bool = False,
+        layer_name: str = 'combined'
+) -> Vector:
     """
     Combine polygon vector objects into one.
     The output is a single vector object with the polygons either stored in
@@ -557,19 +594,19 @@ def combine_polygons(vector, crs=4326, multipolygon=False, layer_name='combined'
 
     Parameters
     ----------
-    vector: spatialist.vector.Vector or list[spatialist.vector.Vector]
+    vector:
         the input vector object(s). Providing only one object only makes sense when `multipolygon=True`.
-    crs: int or str
+    crs:
         the target CRS. Default: EPSG:4326
-    multipolygon: bool
+    multipolygon:
         combine all polygons into one multipolygon?
         Default False: write each polygon into a separate feature.
-    layer_name: str
+    layer_name:
         the layer name of the output vector object.
 
     Returns
     -------
-    spatialist.vector.Vector
+        the combined vector object
     """
     if not isinstance(vector, list):
         vector = [vector]
