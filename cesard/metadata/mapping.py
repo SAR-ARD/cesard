@@ -67,7 +67,8 @@ NS_MAP = {
     'om': 'http://www.opengis.net/om/2.0',
     'gml': 'http://www.opengis.net/gml/3.2',
     'ows': 'http://www.opengis.net/ows/2.0',
-    'xlink': 'http://www.w3.org/1999/xlink'}
+    'xlink': 'http://www.w3.org/1999/xlink'
+}
 
 ASSET_MAP = {
     'dm': {'type': 'Mask',
