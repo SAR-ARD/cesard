@@ -28,6 +28,95 @@ T = TypeVar('T')  # any type
 K = TypeVar('K')  # key
 
 
+def buffer_min_overlap(
+        geom1: Vector,
+        geom2: Vector,
+        percent: int | float = 1,
+        step: int | float | None = None
+) -> None:
+    """
+    Buffer a rectangular geometry to a minimum overlap with a second geometry.
+    The geometry is iteratively buffered until the minimum overlap is reached.
+    If the overlap of the input geometries is already larger than the defined
+    threshold, a copy of the original geometry is returned.
+
+    Parameters
+    ----------
+    geom1:
+        the geometry to be buffered
+    geom2:
+        the reference geometry to intersect with
+    percent:
+        the minimum overlap in percent of `geom1`
+    step:
+        the buffering step size. If None, the step size is 0.1 % of the
+        average rectangle corner length.
+    """
+    geom1_crs = geom1.getProjection('epsg')
+    geom2_crs = geom2.getProjection('epsg')
+    if geom1_crs != geom2_crs:
+        raise ValueError('both geometries must have the same CRS')
+    geom2_area = geom2.getArea()
+    ext = geom1.extent
+    ext2 = ext.copy()
+    if step is None:
+        xdist = ext['xmax'] - ext['xmin']
+        ydist = ext['ymax'] - ext['ymin']
+        step = (xdist + ydist) / 2 / 1000
+    buffer = 0
+    overlap = 0
+    while overlap <= percent:
+        xbuf = buffer * step
+        ybuf = buffer * step
+        ext2['xmin'] = ext['xmin'] - xbuf
+        ext2['xmax'] = ext['xmax'] + xbuf
+        ext2['ymin'] = ext['ymin'] - ybuf
+        ext2['ymax'] = ext['ymax'] + ybuf
+        with bbox(ext2, geom1_crs) as geom3:
+            ext3 = geom3.extent
+            with intersect(geom2, geom3) as inter:
+                inter_area = inter.getArea()
+                overlap = inter_area / geom2_area * 100
+        buffer += 1
+    return bbox(ext3, geom1_crs)
+
+
+def buffer_time(
+        start: str,
+        stop: str,
+        as_datetime: bool = False,
+        str_format: str = '%Y%m%dT%H%M%S',
+        **kwargs
+) -> tuple[str | datetime, str | datetime]:
+    """
+    Time range buffering
+
+    Parameters
+    ----------
+    start:
+        the start time date object to convert; timezone-unaware dates are interpreted as UTC.
+    stop:
+        the stop time date object to convert; timezone-unaware dates are interpreted as UTC.
+    as_datetime:
+        return datetime objects instead of strings?
+    str_format:
+        the output string format (ignored if `as_datetime` is True)
+    kwargs
+        time arguments passed to :func:`datetime.timedelta`
+
+    Returns
+    -------
+        the buffered start and stop time as string or datetime object
+    """
+    td = timedelta(**kwargs)
+    start = date_to_utc(start, as_datetime=True) - td
+    stop = date_to_utc(stop, as_datetime=True) + td
+    if not as_datetime:
+        start = start.strftime(str_format)
+        stop = stop.strftime(str_format)
+    return start, stop
+
+
 def check_scene_consistency(
         scenes: list[str | pyroSAR.drivers.ID]
 ) -> None:
@@ -81,6 +170,267 @@ def check_spacing(
                            f'with MGRS tile size and overlaps.\nOptions: {options}')
 
 
+def combine_polygons(
+        vector: Vector | list[Vector],
+        crs: int | str = 4326,
+        multipolygon: bool = False,
+        layer_name: str = 'combined'
+) -> Vector:
+    """
+    Combine polygon vector objects into one.
+    The output is a single vector object with the polygons either stored in
+    separate features or combined into a single multipolygon geometry.
+
+    Parameters
+    ----------
+    vector:
+        the input vector object(s). Providing only one object only makes sense when `multipolygon=True`.
+    crs:
+        the target CRS. Default: EPSG:4326
+    multipolygon:
+        combine all polygons into one multipolygon?
+        Default False: write each polygon into a separate feature.
+    layer_name:
+        the layer name of the output vector object.
+
+    Returns
+    -------
+        the combined vector object
+    """
+    if not isinstance(vector, list):
+        vector = [vector]
+    ##############################################################################
+    # check geometry types
+    geometry_names = []
+    field_defs = []
+    for item in vector:
+        field_defs.extend(item.fieldDefs)
+        for feature in item.layer:
+            geom = feature.GetGeometryRef()
+            geometry_names.append(geom.GetGeometryName())
+        item.layer.ResetReading()
+    geom = None
+    geometry_names = list(set(geometry_names))
+    if not all(x == 'POLYGON' for x in geometry_names):
+        raise RuntimeError('All geometries must be of type POLYGON')
+    ##############################################################################
+    vec = Vector(driver='Memory')
+    srs_out = crsConvert(crs, 'osr')
+    if multipolygon:
+        geom_type = ogr.wkbMultiPolygon
+        geom_out = [ogr.Geometry(geom_type)]
+    else:
+        geom_type = ogr.wkbPolygon
+        geom_out = []
+    fields = []
+    vec.addlayer(name=layer_name, srs=srs_out, geomType=geom_type)
+    for item in vector:
+        fieldnames = item.fieldnames
+        if item.srs.IsSame(srs_out):
+            coord_trans = None
+        else:
+            coord_trans = osr.CoordinateTransformation(item.srs, srs_out)
+        for feature in item.layer:
+            geom = feature.GetGeometryRef()
+            if coord_trans is not None:
+                geom.Transform(coord_trans)
+            if multipolygon:
+                geom_out[0].AddGeometry(geom.Clone())
+            else:
+                fields.append({x: feature.GetField(x) for x in fieldnames})
+                geom_out.append(geom.Clone())
+        item.layer.ResetReading()
+    geom = None
+    if multipolygon:
+        geom_out = geom_out[0].UnionCascaded()
+        vec.addfeature(geom_out)
+    else:
+        for field_def in field_defs:
+            if field_def.GetName() not in vec.fieldnames:
+                vec.layer.CreateField(field_def)
+        for i, geom in enumerate(geom_out):
+            vec.addfeature(geometry=geom, fields=fields[i])
+    geom_out = None
+    return vec
+
+
+def compute_hash(
+        file_path: str,
+        algorithm: str = 'sha256',
+        chunk_size: int = 8192,
+        multihash_encode: bool = True
+) -> str:
+    """
+    Compute the (multi)hash of a file using the specified algorithm.
+
+    Parameters
+    ----------
+    file_path:
+        Path to the file.
+    algorithm:
+        Hash algorithm to use (default is 'sha256').
+    chunk_size:
+        Size of chunks to read from the file in bytes (default is 8192).
+    multihash_encode:
+        Encode the hash according to the
+        `multihash specification <https://github.com/multiformats/multihash>`_
+        (default is True)?
+        The hash generated by `hashlib` will be wrapped using
+        :func:`multiformats.multihash.wrap`.
+
+    Returns
+    -------
+        the hexadecimal hash string of the file.
+
+    See Also
+    --------
+    :mod:`hashlib`
+    :mod:`multiformats.multihash`
+    """
+    # lookup between hashlib and multihash algorithm names; to be extended if necessary
+    algo_lookup = {'sha1': 'sha1',
+                   'sha256': 'sha2-256',
+                   'sha512': 'sha2-512'}
+    if algorithm not in algo_lookup.keys():
+        raise ValueError(f'Hash algorithm must be one of {algo_lookup.keys()}')
+    hash_func = getattr(hashlib, algorithm)()
+    with open(file_path, 'rb') as f:
+        while chunk := f.read(chunk_size):
+            hash_func.update(chunk)
+    if multihash_encode:
+        digest = hash_func.digest()
+        mh = multihash.wrap(digest, algo_lookup[algorithm])
+        return mh.hex()
+    else:
+        return hash_func.hexdigest()
+
+
+def datamask(
+        measurement: str,
+        dm_ras: str,
+        dm_vec: str
+) -> str | None:
+    """
+    Create data masks for a given image file.
+    The created raster data mask does not contain a simple mask of nodata values.
+    Rather, a boundary vector geometry containing all valid pixels is created and
+    then rasterized. This boundary geometry (single polygon) is saved as `dm_vec`.
+    In this case `dm_vec` is returned.
+    If the input image only contains nodata values, no raster data mask is created,
+    and an empty dummy vector mask is created. In this case the function will return
+    `None`.
+
+
+    Parameters
+    ----------
+    measurement:
+        the binary image file
+    dm_ras:
+        the name of the raster data mask
+    dm_vec:
+        the name of the vector data mask
+
+    Returns
+    -------
+        `dm_vec` if the vector data mask contains a geometry or None otherwise
+    """
+    
+    def mask_from_array(arr, dm_vec, dm_ras, ref):
+        """
+
+        Parameters
+        ----------
+        arr: np.ndarray
+        dm_vec: str
+        dm_ras: str
+        ref: spatialist.raster.Raster
+
+        Returns
+        -------
+        str or None
+        """
+        # create a dummy vector mask if the mask only contains 0 values
+        if len(arr[arr == 1]) == 0:
+            Path(dm_vec).touch(exist_ok=False)
+            return None
+        # vectorize the raster data mask
+        with vectorize(target=arr, reference=ref) as vec:
+            # compute a valid data boundary geometry (vector data mask)
+            with boundary(vec, expression="value=1") as bounds:
+                # rasterize the vector data mask
+                if not os.path.isfile(dm_ras):
+                    rasterize(vectorobject=bounds, reference=ref,
+                              outname=dm_ras)
+                # write the vector data mask
+                bounds.write(outfile=dm_vec)
+        return dm_vec
+    
+    if os.path.isfile(dm_vec) and os.path.isfile(dm_ras):
+        return None if os.path.getsize(dm_vec) == 0 else dm_vec
+    
+    with LockCollection([dm_vec, dm_ras]):
+        if not os.path.isfile(dm_vec):
+            if not os.path.isfile(dm_ras):
+                with Raster(measurement) as ras:
+                    arr = ras.array()
+                    # create a nodata mask
+                    mask = ~np.isnan(arr)
+                    del arr
+                    out = mask_from_array(arr=mask, dm_vec=dm_vec,
+                                          dm_ras=dm_ras, ref=ras)
+            else:
+                # read the raster data mask
+                with Raster(dm_ras) as ras:
+                    mask = ras.array()
+                    out = mask_from_array(arr=mask, dm_vec=dm_vec,
+                                          dm_ras=dm_ras, ref=ras)
+                    del mask
+        else:
+            if os.path.getsize(dm_vec) == 0:
+                out = None
+            else:
+                out = dm_vec
+    return out
+
+
+def date_to_utc(
+        date: str | datetime | None,
+        as_datetime: bool = False,
+        str_format: str = '%Y%m%dT%H%M%S'
+) -> str | datetime | None:
+    """
+    convert a date object to a UTC date string or datetime object.
+
+    Parameters
+    ----------
+    date:
+        the date object to convert; timezone-unaware dates are interpreted as UTC.
+    as_datetime:
+        return a datetime object instead of a string?
+    str_format:
+        the output string format (ignored if `as_datetime` is True)
+
+    Returns
+    -------
+        the date string or datetime object in UTC time zone
+    """
+    if date is None:
+        return date
+    elif isinstance(date, str):
+        out = dateutil.parser.parse(date)
+    elif isinstance(date, datetime):
+        out = date
+    else:
+        raise TypeError('date must be a string, datetime object or None')
+    if out.tzinfo is None:
+        out = out.replace(tzinfo=timezone.utc)
+    else:
+        out = out.astimezone(timezone.utc)
+    if not as_datetime:
+        out = out.strftime(str_format)
+    return out
+
+
 def generate_unique_id(
         encoded_str: bytes,
         length: int = 4
@@ -113,6 +463,28 @@ def generate_unique_id(
     mask = (1 << (length * 4)) - 1  # Each hex digit = 4 bits
     p_id = f'{crc & mask:0{length}X}'
     return p_id
+
+
+def get_kml() -> str:
+    """
+    Download the Sentinel-2 MGRS grid KML file. The target folder is ~/cesard.
+
+    Returns
+    -------
+        the path to the KML file
+    """
+    remote = ('https://sentiwiki.copernicus.eu/__attachments/1692737/'
+              'S2A_OPER_GIP_TILPAR_MPC__20151209T095117_V20150622T000000_21000101T000000_B00.zip')
+    local_path = os.path.join(os.path.expanduser('~'), '.cesard')
+    os.makedirs(local_path, exist_ok=True)
+    local = os.path.join(local_path, os.path.basename(remote).replace('.zip', '.kml'))
+    with Lock(local):
+        if not os.path.isfile(local):
+            log.info(f'downloading MGRS grid KML file to {local_path}')
+            r = requests.get(remote)
+            with zipfile.ZipFile(io.BytesIO(r.content)) as zf:
+                zf.extractall(local_path)
+    return local
 
 
 def get_max_ext(
@@ -166,6 +538,27 @@ def get_max_ext(
             geo.reproject(projection=crs)
             max_ext = geo.extent
     return max_ext
+
+
+def get_tmp_name(suffix: str) -> str:
+    """
+    Get the name of a temporary file with defined suffix.
+    Files are placed in a subdirectory 'cesard' of the regular
+    temporary directory so the latter is not flooded with too
+    many files in case they are not properly deleted.
+
+    Parameters
+    ----------
+    suffix: str
+        the file suffix/extension, e.g. '.tif'
+
+    Returns
+    -------
+        the temporary file name
+    """
+    tmpdir = os.path.join(tempfile.gettempdir(), 'cesard')
+    os.makedirs(tmpdir, exist_ok=True)
+    return tempfile.NamedTemporaryFile(suffix=suffix, dir=tmpdir).name
 
 
 def group_by_attr(
@@ -270,396 +663,3 @@ def vrt_add_overviews(
     ovr.attrib['resampling'] = resampling.lower()
     etree.indent(root)
     tree.write(vrt, pretty_print=True, xml_declaration=False, encoding='utf-8')
-
-
-def buffer_min_overlap(
-        geom1: Vector,
-        geom2: Vector,
-        percent: int | float = 1,
-        step: int | float | None = None
-) -> None:
-    """
-    Buffer a rectangular geometry to a minimum overlap with a second geometry.
-    The geometry is iteratively buffered until the minimum overlap is reached.
-    If the overlap of the input geometries is already larger than the defined
-    threshold, a copy of the original geometry is returned.
-
-    Parameters
-    ----------
-    geom1:
-        the geometry to be buffered
-    geom2:
-        the reference geometry to intersect with
-    percent:
-        the minimum overlap in percent of `geom1`
-    step:
-        the buffering step size. If None, the step size is 0.1 % of the
-        average rectangle corner length.
-    """
-    geom1_crs = geom1.getProjection('epsg')
-    geom2_crs = geom2.getProjection('epsg')
-    if geom1_crs != geom2_crs:
-        raise ValueError('both geometries must have the same CRS')
-    geom2_area = geom2.getArea()
-    ext = geom1.extent
-    ext2 = ext.copy()
-    if step is None:
-        xdist = ext['xmax'] - ext['xmin']
-        ydist = ext['ymax'] - ext['ymin']
-        step = (xdist + ydist) / 2 / 1000
-    buffer = 0
-    overlap = 0
-    while overlap <= percent:
-        xbuf = buffer * step
-        ybuf = buffer * step
-        ext2['xmin'] = ext['xmin'] - xbuf
-        ext2['xmax'] = ext['xmax'] + xbuf
-        ext2['ymin'] = ext['ymin'] - ybuf
-        ext2['ymax'] = ext['ymax'] + ybuf
-        with bbox(ext2, geom1_crs) as geom3:
-            ext3 = geom3.extent
-            with intersect(geom2, geom3) as inter:
-                inter_area = inter.getArea()
-                overlap = inter_area / geom2_area * 100
-        buffer += 1
-    return bbox(ext3, geom1_crs)
-
-
-def date_to_utc(
-        date: str | datetime | None,
-        as_datetime: bool = False,
-        str_format: str = '%Y%m%dT%H%M%S'
-) -> str | datetime | None:
-    """
-    convert a date object to a UTC date string or datetime object.
-
-    Parameters
-    ----------
-    date:
-        the date object to convert; timezone-unaware dates are interpreted as UTC.
-    as_datetime:
-        return a datetime object instead of a string?
-    str_format:
-        the output string format (ignored if `as_datetime` is True)
-
-    Returns
-    -------
-        the date string or datetime object in UTC time zone
-    """
-    if date is None:
-        return date
-    elif isinstance(date, str):
-        out = dateutil.parser.parse(date)
-    elif isinstance(date, datetime):
-        out = date
-    else:
-        raise TypeError('date must be a string, datetime object or None')
-    if out.tzinfo is None:
-        out = out.replace(tzinfo=timezone.utc)
-    else:
-        out = out.astimezone(timezone.utc)
-    if not as_datetime:
-        out = out.strftime(str_format)
-    return out
-
-
-def buffer_time(
-        start: str,
-        stop: str,
-        as_datetime: bool = False,
-        str_format: str = '%Y%m%dT%H%M%S',
-        **kwargs
-) -> tuple[str | datetime, str | datetime]:
-    """
-    Time range buffering
-    
-    Parameters
-    ----------
-    start:
-        the start time date object to convert; timezone-unaware dates are interpreted as UTC.
-    stop:
-        the stop time date object to convert; timezone-unaware dates are interpreted as UTC.
-    as_datetime:
-        return datetime objects instead of strings?
-    str_format:
-        the output string format (ignored if `as_datetime` is True)
-    kwargs
-        time arguments passed to :func:`datetime.timedelta`
-
-    Returns
-    -------
-        the buffered start and stop time as string or datetime object
-    """
-    td = timedelta(**kwargs)
-    start = date_to_utc(start, as_datetime=True) - td
-    stop = date_to_utc(stop, as_datetime=True) + td
-    if not as_datetime:
-        start = start.strftime(str_format)
-        stop = stop.strftime(str_format)
-    return start, stop
-
-
-def get_kml() -> str:
-    """
-    Download the Sentinel-2 MGRS grid KML file. The target folder is ~/cesard.
-
-    Returns
-    -------
-        the path to the KML file
-    """
-    remote = ('https://sentiwiki.copernicus.eu/__attachments/1692737/'
-              'S2A_OPER_GIP_TILPAR_MPC__20151209T095117_V20150622T000000_21000101T000000_B00.zip')
-    local_path = os.path.join(os.path.expanduser('~'), '.cesard')
-    os.makedirs(local_path, exist_ok=True)
-    local = os.path.join(local_path, os.path.basename(remote).replace('.zip', '.kml'))
-    with Lock(local):
-        if not os.path.isfile(local):
-            log.info(f'downloading MGRS grid KML file to {local_path}')
-            r = requests.get(remote)
-            with zipfile.ZipFile(io.BytesIO(r.content)) as zf:
-                zf.extractall(local_path)
-    return local
-
-
-def compute_hash(
-        file_path: str,
-        algorithm: str = 'sha256',
-        chunk_size: int = 8192,
-        multihash_encode: bool = True
-) -> str:
-    """
-    Compute the (multi)hash of a file using the specified algorithm.
-
-    Parameters
-    ----------
-    file_path:
-        Path to the file.
-    algorithm:
-        Hash algorithm to use (default is 'sha256').
-    chunk_size:
-        Size of chunks to read from the file in bytes (default is 8192).
-    multihash_encode:
-        Encode the hash according to the
-        `multihash specification <https://github.com/multiformats/multihash>`_
-        (default is True)?
-        The hash generated by `hashlib` will be wrapped using
-        :func:`multiformats.multihash.wrap`.
-
-    Returns
-    -------
-        the hexadecimal hash string of the file.
-
-    See Also
-    --------
-    :mod:`hashlib`
-    :mod:`multiformats.multihash`
-    """
-    # lookup between hashlib and multihash algorithm names; to be extended if necessary
-    algo_lookup = {'sha1': 'sha1',
-                   'sha256': 'sha2-256',
-                   'sha512': 'sha2-512'}
-    if algorithm not in algo_lookup.keys():
-        raise ValueError(f'Hash algorithm must be one of {algo_lookup.keys()}')
-    hash_func = getattr(hashlib, algorithm)()
-    with open(file_path, 'rb') as f:
-        while chunk := f.read(chunk_size):
-            hash_func.update(chunk)
-    if multihash_encode:
-        digest = hash_func.digest()
-        mh = multihash.wrap(digest, algo_lookup[algorithm])
-        return mh.hex()
-    else:
-        return hash_func.hexdigest()
-
-
-def datamask(
-        measurement: str,
-        dm_ras: str,
-        dm_vec: str
-) -> str | None:
-    """
-    Create data masks for a given image file.
-    The created raster data mask does not contain a simple mask of nodata values.
-    Rather, a boundary vector geometry containing all valid pixels is created and
-    then rasterized. This boundary geometry (single polygon) is saved as `dm_vec`.
-    In this case `dm_vec` is returned.
-    If the input image only contains nodata values, no raster data mask is created,
-    and an empty dummy vector mask is created. In this case the function will return
-    `None`.
-    
-    
-    Parameters
-    ----------
-    measurement:
-        the binary image file
-    dm_ras:
-        the name of the raster data mask
-    dm_vec:
-        the name of the vector data mask
-
-    Returns
-    -------
-        `dm_vec` if the vector data mask contains a geometry or None otherwise
-    """
-    
-    def mask_from_array(arr, dm_vec, dm_ras, ref):
-        """
-        
-        Parameters
-        ----------
-        arr: np.ndarray
-        dm_vec: str
-        dm_ras: str
-        ref: spatialist.raster.Raster
-
-        Returns
-        -------
-        str or None
-        """
-        # create a dummy vector mask if the mask only contains 0 values
-        if len(arr[arr == 1]) == 0:
-            Path(dm_vec).touch(exist_ok=False)
-            return None
-        # vectorize the raster data mask
-        with vectorize(target=arr, reference=ref) as vec:
-            # compute a valid data boundary geometry (vector data mask)
-            with boundary(vec, expression="value=1") as bounds:
-                # rasterize the vector data mask
-                if not os.path.isfile(dm_ras):
-                    rasterize(vectorobject=bounds, reference=ref,
-                              outname=dm_ras)
-                # write the vector data mask
-                bounds.write(outfile=dm_vec)
-        return dm_vec
-    
-    if os.path.isfile(dm_vec) and os.path.isfile(dm_ras):
-        return None if os.path.getsize(dm_vec) == 0 else dm_vec
-    
-    with LockCollection([dm_vec, dm_ras]):
-        if not os.path.isfile(dm_vec):
-            if not os.path.isfile(dm_ras):
-                with Raster(measurement) as ras:
-                    arr = ras.array()
-                    # create a nodata mask
-                    mask = ~np.isnan(arr)
-                    del arr
-                    out = mask_from_array(arr=mask, dm_vec=dm_vec,
-                                          dm_ras=dm_ras, ref=ras)
-            else:
-                # read the raster data mask
-                with Raster(dm_ras) as ras:
-                    mask = ras.array()
-                    out = mask_from_array(arr=mask, dm_vec=dm_vec,
-                                          dm_ras=dm_ras, ref=ras)
-                    del mask
-        else:
-            if os.path.getsize(dm_vec) == 0:
-                out = None
-            else:
-                out = dm_vec
-    return out
-
-
-def get_tmp_name(suffix: str) -> str:
-    """
-    Get the name of a temporary file with defined suffix.
-    Files are placed in a subdirectory 'cesard' of the regular
-    temporary directory so the latter is not flooded with too
-    many files in case they are not properly deleted.
-    
-    Parameters
-    ----------
-    suffix: str
-        the file suffix/extension, e.g. '.tif'
-
-    Returns
-    -------
-        the temporary file name
-    """
-    tmpdir = os.path.join(tempfile.gettempdir(), 'cesard')
-    os.makedirs(tmpdir, exist_ok=True)
-    return tempfile.NamedTemporaryFile(suffix=suffix, dir=tmpdir).name
-
-
-def combine_polygons(
-        vector: Vector | list[Vector],
-        crs: int | str = 4326,
-        multipolygon: bool = False,
-        layer_name: str = 'combined'
-) -> Vector:
-    """
-    Combine polygon vector objects into one.
-    The output is a single vector object with the polygons either stored in
-    separate features or combined into a single multipolygon geometry.
-
-    Parameters
-    ----------
-    vector:
-        the input vector object(s). Providing only one object only makes sense when `multipolygon=True`.
-    crs:
-        the target CRS. Default: EPSG:4326
-    multipolygon:
-        combine all polygons into one multipolygon?
-        Default False: write each polygon into a separate feature.
-    layer_name:
-        the layer name of the output vector object.
-
-    Returns
-    -------
-        the combined vector object
-    """
-    if not isinstance(vector, list):
-        vector = [vector]
-    ##############################################################################
-    # check geometry types
-    geometry_names = []
-    field_defs = []
-    for item in vector:
-        field_defs.extend(item.fieldDefs)
-        for feature in item.layer:
-            geom = feature.GetGeometryRef()
-            geometry_names.append(geom.GetGeometryName())
-        item.layer.ResetReading()
-    geom = None
-    geometry_names = list(set(geometry_names))
-    if not all(x == 'POLYGON' for x in geometry_names):
-        raise RuntimeError('All geometries must be of type POLYGON')
-    ##############################################################################
-    vec = Vector(driver='Memory')
-    srs_out = crsConvert(crs, 'osr')
-    if multipolygon:
-        geom_type = ogr.wkbMultiPolygon
-        geom_out = [ogr.Geometry(geom_type)]
-    else:
-        geom_type = ogr.wkbPolygon
-        geom_out = []
-    fields = []
-    vec.addlayer(name=layer_name, srs=srs_out, geomType=geom_type)
-    for item in vector:
-        fieldnames = item.fieldnames
-        if item.srs.IsSame(srs_out):
-            coord_trans = None
-        else:
-            coord_trans = osr.CoordinateTransformation(item.srs, srs_out)
-        for feature in item.layer:
-            geom = feature.GetGeometryRef()
-            if coord_trans is not None:
-                geom.Transform(coord_trans)
-            if multipolygon:
-                geom_out[0].AddGeometry(geom.Clone())
-            else:
-                fields.append({x: feature.GetField(x) for x in fieldnames})
-                geom_out.append(geom.Clone())
-        item.layer.ResetReading()
-    geom = None
-    if multipolygon:
-        geom_out = geom_out[0].UnionCascaded()
-        vec.addfeature(geom_out)
-    else:
-        for field_def in field_defs:
-            if field_def.GetName() not in vec.fieldnames:
-                vec.layer.CreateField(field_def)
-        for i, geom in enumerate(geom_out):
-            vec.addfeature(geometry=geom, fields=fields[i])
-    geom_out = None
-    return vec
