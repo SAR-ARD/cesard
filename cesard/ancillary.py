@@ -12,6 +12,7 @@ import binascii
 from lxml import etree
 from datetime import datetime, timedelta, timezone
 from osgeo import ogr, osr
+from pyproj import Geod
 import numpy as np
 import spatialist
 from spatialist.raster import Raster, rasterize
@@ -634,6 +635,40 @@ def group_by_time(
             groups.append([scenes[i]])
             group = groups[-1]
     return groups
+
+
+def pixel_size_degrees(
+        lon: float, lat: float,
+        xres: float, yres: float
+) -> tuple[float, float]:
+    """
+    Convert a pixel size from meters to degrees.
+
+    Parameters
+    ----------
+    lon:
+        longitude in degrees
+    lat:
+        latitude in degrees
+    xres:
+        x resolution in meters
+    yres:
+        y resolution in meters
+
+    Returns
+    -------
+        the x and y resolution in degrees
+    
+    See Also
+    --------
+    pyproj.Geod.fwd
+    """
+    geod = Geod(ellps="WGS84")
+    lon2, lat2, _ = geod.fwd(lon, lat, az=0, dist=yres)
+    yres_deg = lat2 - lat
+    lon3, lat3, _ = geod.fwd(lon, lat, az=90, dist=xres)
+    xres_deg = lon3 - lon
+    return xres_deg, yres_deg
 
 
 def vrt_add_overviews(

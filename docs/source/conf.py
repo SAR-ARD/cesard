@@ -50,6 +50,7 @@ intersphinx_mapping = {
     'duckdb': ('https://duckdb.org/docs/stable/clients/python/reference', None),
     'multiformats': ('https://multiformats.readthedocs.io/en/stable', None),
     'osgeo': ('https://gdal.org/en/stable', None),
+    'pyproj': ('https://pyproj4.github.io/pyproj/stable', None),
     'pyroSAR': ('https://pyrosar.readthedocs.io/en/latest', None),
     'pystac': ('https://pystac.readthedocs.io/en/stable', None),
     'pystac-client': ('https://pystac-client.readthedocs.io/en/stable', None),
