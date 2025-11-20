@@ -407,7 +407,7 @@ def rtc(
         dem_resampling_method: str = 'BILINEAR_INTERPOLATION',
         sigma0: bool = True,
         scattering_area: bool = True,
-        dem_oversampling_multiple: int = 2,
+        dem_oversampling_multiple: int = 1,
         gpt_args: list[str] | None = None
 ) -> None:
     """
