@@ -6,7 +6,8 @@ from pyroSAR.drivers import ID
 from pyroSAR.auxdata import dem_autoload, dem_create
 from pyroSAR.ancillary import Lock
 import cesard.tile_extraction as tile_ex
-from cesard.ancillary import generate_unique_id, get_max_ext, vrt_add_overviews, get_tmp_name
+from cesard.ancillary import (generate_unique_id, get_max_ext, get_tmp_name,
+                              pixel_size_degrees, vrt_add_overviews)
 from spatialist.vector import bbox, intersect, Vector
 from typing import Literal
 import logging
@@ -143,7 +144,7 @@ def prepare(
     dir_out:
         the destination directory
     tr:
-        the target resolution in meters as (x, y). Only applies to mode `multi-UTM`.
+        the target resolution in meters as (x, y).
     username:
         The username for accessing the DEM tiles. If None and authentication is required
         for the selected DEM type, the environment variable 'DEM_USER' is read.
@@ -167,9 +168,15 @@ def prepare(
         with Lock(fname_dem):
             if not os.path.isfile(fname_dem):
                 log.info('creating scene-specific DEM mosaic in EPSG:4326')
+                if tr is not None:
+                    with scene.geometry() as vec:
+                        ext = vec.extent
+                    tr = pixel_size_degrees(lon=abs(ext['xmax'] - ext['xmin']) / 2,
+                                            lat=abs(ext['ymax'] - ext['ymin']) / 2,
+                                            xres=tr[0], yres=tr[1])
                 with scene.bbox(buffer=0.002) as geom:
                     mosaic(geometry=geom, outname=fname_dem,
-                           dem_type=dem_type,
+                           dem_type=dem_type, tr=tr,
                            username=username, password=password)
             else:
                 log.info(f'found scene-specific DEM mosaic: {fname_dem}')
