@@ -396,7 +396,8 @@ def retile(
                                geoid_convert=geoid_convert, geoid=geoid,
                                outputBounds=bounds, threads=threads,
                                nodata=-32767, creationOptions=create_options)
-        os.remove(fname_dem_tmp)
+        if fname_dem_tmp is not None:
+            os.remove(fname_dem_tmp)
         ###############################################
         # create final WBM tiles
         if len(wbm_target) > 0:
@@ -413,7 +414,8 @@ def retile(
                                resampleAlg='mode', pbar=False,
                                outputBounds=bounds, threads=threads,
                                creationOptions=create_options)
-        os.remove(fname_wbm_tmp)
+        if fname_wbm_tmp is not None:
+            os.remove(fname_wbm_tmp)
 
 
 def to_mgrs(
