@@ -352,7 +352,7 @@ def retile(
         if len(dem_target) == 0 and len(wbm_target) == 0:
             continue
         ###############################################
-        # DEM download and VRT mosaic creation
+        # DEM/WBM download and VRT mosaic creation
         
         # get download authentication if either WBM or DEM VRTs will be created
         c_wbm = fname_wbm_tmp is not None and not os.path.isfile(fname_wbm_tmp)
@@ -383,6 +383,7 @@ def retile(
                                      username=username, password=password,
                                      crop=False, lock_timeout=lock_timeout)
         ###############################################
+        # create final DEM tiles
         if len(dem_target) > 0:
             tiles = [x[0].mgrs for x in dem_target]
             log.info(f'creating DEM MGRS tiles: {tiles}')
@@ -397,7 +398,9 @@ def retile(
                                geoid_convert=geoid_convert, geoid=geoid,
                                outputBounds=bounds, threads=threads,
                                nodata=-32767, creationOptions=create_options)
+        os.remove(fname_dem_tmp)
         ###############################################
+        # create final WBM tiles
         if len(wbm_target) > 0:
             tiles = [x[0].mgrs for x in wbm_target]
             log.info(f'creating WBM MGRS tiles: {tiles}')
@@ -412,6 +415,7 @@ def retile(
                                resampleAlg='mode', pbar=False,
                                outputBounds=bounds, threads=threads,
                                creationOptions=create_options)
+        os.remove(fname_wbm_tmp)
 
 
 def to_mgrs(
