@@ -1,12 +1,13 @@
 import os
 import re
+import tempfile
 import itertools
 from getpass import getpass
 from pyroSAR.drivers import ID
 from pyroSAR.auxdata import dem_autoload, dem_create
 from pyroSAR.ancillary import Lock
 import cesard.tile_extraction as tile_ex
-from cesard.ancillary import generate_unique_id, get_max_ext, vrt_add_overviews, get_tmp_name
+from cesard.ancillary import get_max_ext, vrt_add_overviews, get_tmp_name
 from spatialist.vector import bbox, intersect, Vector
 from typing import Literal
 import logging
@@ -290,10 +291,12 @@ def retile(
                 'Copernicus 30m Global DEM II']
     if wbm_dir is not None and dem_type in wbm_dems:
         wbm_dir = os.path.join(wbm_dir, dem_type)
+        os.makedirs(wbm_dir, exist_ok=True)
     else:
         wbm_dir = None
     if dem_dir is not None:
         dem_dir = os.path.join(dem_dir, dem_type)
+        os.makedirs(dem_dir, exist_ok=True)
     if wbm_dir is None and dem_dir is None:
         return
     # get the geometries of all tiles overlapping with the AOI
@@ -324,15 +327,12 @@ def retile(
             box.reproject(4326)
             ext_4326 = box.extent
         
-        # create a unique ID for the names of the VRTs that will be created.
-        ext_id = generate_unique_id(encoded_str=str(ext_4326).encode())
-        
         if dem_dir is not None:
             dem_names_base = ['{}_DEM.tif'.format(tile.mgrs) for tile in vectors]
             dem_names = [os.path.join(dem_dir, x) for x in dem_names_base]
             dem_target = [(tile, name) for tile, name in zip(vectors, dem_names)
                           if not os.path.isfile(name)]
-            fname_dem_tmp = os.path.join(dem_dir, 'mosaic_{}.vrt'.format(ext_id))
+            fname_dem_tmp = tempfile.NamedTemporaryFile(suffix='.vrt', dir=dem_dir).name
         else:
             dem_target = dict()
             fname_dem_tmp = None
@@ -343,7 +343,7 @@ def retile(
             wbm_names = [os.path.join(wbm_dir, x) for x in wbm_names_base]
             wbm_target = [(tile, name) for tile, name in zip(tiles_wbm, wbm_names)
                           if not os.path.isfile(name)]
-            fname_wbm_tmp = os.path.join(wbm_dir, 'mosaic_{}.vrt'.format(ext_id))
+            fname_wbm_tmp = tempfile.NamedTemporaryFile(suffix='.vrt', dir=wbm_dir).name
         else:
             wbm_target = dict()
             fname_wbm_tmp = None
@@ -352,7 +352,7 @@ def retile(
         if len(dem_target) == 0 and len(wbm_target) == 0:
             continue
         ###############################################
-        # DEM download and VRT mosaic creation
+        # DEM/WBM download and VRT mosaic creation
         
         # get download authentication if either WBM or DEM VRTs will be created
         c_wbm = fname_wbm_tmp is not None and not os.path.isfile(fname_wbm_tmp)
@@ -364,7 +364,6 @@ def retile(
         
         # download WBM tiles and combine them in a VRT mosaic
         if c_wbm:
-            os.makedirs(wbm_dir, exist_ok=True)
             with Lock(fname_wbm_tmp, timeout=lock_timeout):
                 if not os.path.isfile(fname_wbm_tmp):
                     with bbox(coordinates=ext_4326, crs=4326) as vec:
@@ -374,7 +373,6 @@ def retile(
                                      crop=False, lock_timeout=lock_timeout)
         # download DEM tiles and combine them in a VRT mosaic
         if c_dem:
-            os.makedirs(dem_dir, exist_ok=True)
             with Lock(fname_dem_tmp, timeout=lock_timeout):
                 if not os.path.isfile(fname_dem_tmp):
                     with bbox(coordinates=ext_4326, crs=4326) as vec:
@@ -383,6 +381,7 @@ def retile(
                                      username=username, password=password,
                                      crop=False, lock_timeout=lock_timeout)
         ###############################################
+        # create final DEM tiles
         if len(dem_target) > 0:
             tiles = [x[0].mgrs for x in dem_target]
             log.info(f'creating DEM MGRS tiles: {tiles}')
@@ -397,7 +396,10 @@ def retile(
                                geoid_convert=geoid_convert, geoid=geoid,
                                outputBounds=bounds, threads=threads,
                                nodata=-32767, creationOptions=create_options)
+        if fname_dem_tmp is not None:
+            os.remove(fname_dem_tmp)
         ###############################################
+        # create final WBM tiles
         if len(wbm_target) > 0:
             tiles = [x[0].mgrs for x in wbm_target]
             log.info(f'creating WBM MGRS tiles: {tiles}')
@@ -412,6 +414,8 @@ def retile(
                                resampleAlg='mode', pbar=False,
                                outputBounds=bounds, threads=threads,
                                creationOptions=create_options)
+        if fname_wbm_tmp is not None:
+            os.remove(fname_wbm_tmp)
 
 
 def to_mgrs(
