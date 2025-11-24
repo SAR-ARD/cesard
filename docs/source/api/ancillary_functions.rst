@@ -23,4 +23,5 @@ Ancillary Functions
         get_tmp_name
         group_by_attr
         group_by_time
+        pixel_size_degrees
         vrt_add_overviews
