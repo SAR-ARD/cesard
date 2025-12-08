@@ -7,7 +7,7 @@ from spatialist import Raster
 from spatialist.ancillary import finder
 from statistics import mean
 from cesard.metadata.mapping import ASSET_MAP, NS_MAP
-from cesard.metadata.extract import get_header_size
+from cesard.metadata.extract import get_header_size, evaluate_types
 from typing import Any
 import logging
 
@@ -35,6 +35,8 @@ def parse(
     exist_ok:
         Do not create files if they already exist?
     """
+    evaluate_types(meta)
+    
     platform = meta['common']['platformShortName']
     pid = {'Sentinel-1': 's1', 'ERS': 'ers', 'ENVISAT': 'env'}[platform]
     key = f"{pid}-{meta['prod']['productName-short'].lower()}"
