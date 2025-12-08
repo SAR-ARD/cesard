@@ -158,8 +158,8 @@ def calc_enl(
     if not return_arr:
         if len(enl[~np.isnan(enl)]) == 0:
             return None
-        out_median = np.nanmedian(out_arr)
-        return np.round(out_median, decimals)
+        out_median = np.nanmedian(out_arr).item()
+        return round(out_median, decimals)
     else:
         return out_arr
 
