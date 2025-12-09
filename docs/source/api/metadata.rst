@@ -14,6 +14,7 @@ Extraction
 
         calc_enl
         calc_performance_estimates
+        evaluate_types
         geometry_from_vec
         get_header_size
         vec_from_srccoords

@@ -14,7 +14,7 @@ from pystac.extensions.classification import ClassificationExtension, Classifica
 from spatialist import Raster
 from spatialist.ancillary import finder
 from cesard.metadata.mapping import ASSET_MAP
-from cesard.metadata.extract import get_header_size
+from cesard.metadata.extract import get_header_size, evaluate_types
 from cesard.ancillary import compute_hash
 from typing import Any
 import logging
@@ -43,6 +43,7 @@ def parse(
     exist_ok:
         Do not create files if they already exist?
     """
+    evaluate_types(meta)
     source_json(meta=meta, target=target, exist_ok=exist_ok)
     product_json(meta=meta, target=target, assets=assets, exist_ok=exist_ok)
 

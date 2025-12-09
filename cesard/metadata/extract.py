@@ -1,6 +1,7 @@
 import re
 import json
 import numpy as np
+from datetime import datetime
 from spatialist import Raster
 from spatialist.auxil import crsConvert
 from spatialist.vector import Vector
@@ -158,8 +159,8 @@ def calc_enl(
     if not return_arr:
         if len(enl[~np.isnan(enl)]) == 0:
             return None
-        out_median = np.nanmedian(out_arr)
-        return np.round(out_median, decimals)
+        out_median = np.nanmedian(out_arr).item()
+        return round(out_median, decimals)
     else:
         return out_arr
 
@@ -197,6 +198,56 @@ def calc_performance_estimates(
                     'maximum': round(_max, decimals),
                     'mean': round(_mean, decimals)}
     return out
+
+
+def evaluate_types(
+        meta: Any
+) -> None:
+    """
+    Evaluate the types of a metadata dictionary as extracted by e.g.
+    :func:`s1ard.metadata.extract.meta_dict`.
+    Currently allowed:
+    
+    - :py:obj:`bool`
+    - :py:obj:`int`
+    - :py:obj:`float`
+    - :py:obj:`str`
+    - :py:obj:`None`
+    - :py:obj:`datetime.datetime`
+    
+    Parameters
+    ----------
+    meta
+        the metadata dictionary to be evaluated.
+
+    Raises
+    ------
+    TypeError
+
+    """
+    collector = dict()
+    
+    def get_typing(item=meta, collector=None, key=''):
+        fill = '' if key == '' else '.'
+        if isinstance(item, dict):
+            return {k: get_typing(v, key=f'{key}{fill}{k}', collector=collector)
+                    for k, v in item.items()}
+        elif isinstance(item, list):
+            return [get_typing(v, key=f'{key}{fill}{k}', collector=collector)
+                    for k, v in enumerate(item)]
+        else:
+            t = type(item)
+            # isinstance(np.float64(3.), float) == True
+            allowed = [bool, int, float, str, type(None), None, datetime]
+            if t not in allowed and collector is not None:
+                collector[key] = t
+            return t
+    
+    get_typing(item=meta, collector=collector)
+    if len(collector) > 0:
+        display = '\n'.join([f'{k}: {v}' for k, v in collector.items()])
+        raise TypeError(f'the passed metadata dictionary contains unsupported types:\n'
+                        f'{display}')
 
 
 def get_header_size(tif: str) -> int:
