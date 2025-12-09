@@ -1,6 +1,14 @@
 Changelog
 =========
 
+1.0.3 | 2025-12-09
+------------------
+
+* [README] add badges (`#10 <https://github.com/SAR-ARD/cesard/pull/10>`_)
+* metadata type evaluation (`#9 <https://github.com/SAR-ARD/cesard/pull/9>`_)
+
+`Full v1.0.3 Changelog <https://github.com/SAR-ARD/cesard/compare/v1.0.2...v1.0.3>`_
+
 1.0.2 | 2025-11-21
 ------------------
 
