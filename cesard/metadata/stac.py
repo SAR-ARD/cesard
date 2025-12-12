@@ -140,8 +140,7 @@ def source_json(
         # processing extension properties
         item.stac_extensions.append('https://stac-extensions.github.io/processing/v1.1.0/schema.json')
         item.properties['processing:facility'] = meta['source'][uid]['processingCenter']
-        item.properties['processing:software'] = {meta['source'][uid]['processorName']:
-                                                      meta['source'][uid]['processorVersion']}
+        item.properties['processing:software'] = meta['source'][uid]['processorVersion']
         item.properties['processing:level'] = meta['common']['processingLevel']
         ####################################
         # card4l extension properties
@@ -372,7 +371,7 @@ def product_json(
                    utm_zone=int(mgrs[:2]))
     if meta['prod']['processingCenter'] is not None:
         item.properties['processing:facility'] = meta['prod']['processingCenter']
-    item.properties['processing:software'] = {meta['prod']['processorName']: meta['prod']['processorVersion']}
+    item.properties['processing:software'] = meta['prod']['processorVersion']
     item.properties['processing:level'] = meta['common']['processingLevel']
     item.properties['card4l:specification'] = meta['prod']['productName-short']
     item.properties['card4l:specification_version'] = meta['prod']['card4l-version']

@@ -166,10 +166,12 @@ def source_xml(
                 value = meta['source'][uid][field_src]
                 if field_src == 'processingDate':
                     value = value.isoformat()
-                if field_src == 'orbitDataSource':
+                elif field_src == 'orbitDataSource':
                     value = value.upper()
-                if field_src in ['azimuthPixelSpacing', 'rangePixelSpacing']:
+                elif field_src in ['azimuthPixelSpacing', 'rangePixelSpacing']:
                     value = str(mean(value.values()))
+                elif field_src == 'processorVersion':
+                    value = value[meta['source'][uid]['processorName']]
                 element.text = value
         
         processingLevel = etree.SubElement(processingInformation, _nsc('_:processingLevel', nsmap, ard_ns=ard_ns))
@@ -412,7 +414,7 @@ def product_xml(
     processorName = etree.SubElement(processingInformation, _nsc('eop:processorName', nsmap))
     processorName.text = meta['prod']['processorName']
     processorVersion = etree.SubElement(processingInformation, _nsc('eop:processorVersion', nsmap))
-    processorVersion.text = meta['prod']['processorVersion']
+    processorVersion.text = meta['prod']['processorVersion'][meta['prod']['processorName']]
     processingMode = etree.SubElement(processingInformation, _nsc('eop:processingMode', nsmap),
                                       attrib={'codeSpace': 'urn:esa:eop:Sentinel1:class'})
     processingMode.text = meta['prod']['processingMode']
