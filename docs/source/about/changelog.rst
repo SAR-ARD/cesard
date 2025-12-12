@@ -1,6 +1,14 @@
 Changelog
 =========
 
+1.1.0 | 2025-12-12
+------------------
+
+* software version tracking (`#12 <https://github.com/SAR-ARD/cesard/pull/12>`_)
+* improve handling of DEMs in EPSG:4326 (`#8 <https://github.com/SAR-ARD/cesard/pull/8>`_)
+
+`Full v1.1.0 Changelog <https://github.com/SAR-ARD/cesard/compare/v1.0.3...v1.1.0>`_
+
 1.0.3 | 2025-12-09
 ------------------
 
