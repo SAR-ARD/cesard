@@ -1,4 +1,9 @@
 import os
+import sys
+from osgeo import gdal
+import spatialist
+import pyroSAR
+import cesard
 
 
 def keyval_check(
@@ -103,3 +108,27 @@ def validate_value(
         if not validator(v):
             msg = "Parameter '{}': value '{}' did not pass validation ({})."
             raise ValueError(msg.format(k, v, condition))
+
+
+def version_dict() -> dict[str, str]:
+    """
+    Get the versions of used packages
+
+    Returns
+    -------
+        a dictionary containing the versions of relevant python packages. Keys:
+        
+        - python
+        - gdal
+        - spatialist
+        - pyrosar
+        - cesard
+    """
+    out = {
+        'python': sys.version,
+        'gdal': gdal.__version__,
+        'spatialist': spatialist.__version__,
+        'pyrosar': pyroSAR.__version__,
+        'cesard': cesard.__version__
+    }
+    return out

@@ -12,3 +12,4 @@ Configuration
         keyval_check
         validate_options
         validate_value
+        version_dict
