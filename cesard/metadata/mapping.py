@@ -25,39 +25,6 @@ LERC_ERR_THRES = {
     'wm': 2e-5
 }
 
-DEM_MAP = {
-    'GETASSE30':
-        {'access': 'https://step.esa.int/auxdata/dem/GETASSE30',
-         'ref': 'https://seadas.gsfc.nasa.gov/help-8.1.0/desktop/GETASSE30ElevationModel.html',
-         'type': 'elevation',
-         'gsd': '30 arcsec',
-         'egm': 'https://apps.dtic.mil/sti/citations/ADA166519'},
-    'Copernicus 10m EEA DEM':
-        {'access': 'ftps://cdsdata.copernicus.eu/DEM-datasets/COP-DEM_EEA-10-DGED/2021_1',
-         'ref': 'https://spacedata.copernicus.eu/web/cscda/dataset-details?articleId=394198',
-         'type': 'surface',
-         'gsd': '10 m',
-         'egm': 'https://bgi.obs-mip.fr/data-products/grids-and-models/egm2008-global-model/'},
-    'Copernicus 30m Global DEM':
-        {'access': 'https://copernicus-dem-30m.s3.eu-central-1.amazonaws.com/',
-         'ref': 'https://copernicus-dem-30m.s3.amazonaws.com/readme.html',
-         'type': 'surface',
-         'gsd': '30 m',
-         'egm': 'https://bgi.obs-mip.fr/data-products/grids-and-models/egm2008-global-model/'},
-    'Copernicus 30m Global DEM II':
-        {'access': 'ftps://cdsdata.copernicus.eu/DEM-datasets/COP-DEM_GLO-30-DGED/2021_1',
-         'ref': 'https://spacedata.copernicus.eu/web/cscda/dataset-details?articleId=394198',
-         'type': 'surface',
-         'gsd': '30 m',
-         'egm': 'https://bgi.obs-mip.fr/data-products/grids-and-models/egm2008-global-model/'},
-    'Copernicus 90m Global DEM II':
-        {'access': 'ftps://cdsdata.copernicus.eu/DEM-datasets/COP-DEM_GLO-90-DGED/2021_1',
-         'ref': 'https://spacedata.copernicus.eu/web/cscda/dataset-details?articleId=394198',
-         'type': 'surface',
-         'gsd': '90 m',
-         'egm': 'https://bgi.obs-mip.fr/data-products/grids-and-models/egm2008-global-model/'}
-}
-
 # XML namespaces are identifiers, and it is not their goal to be directly usable for schema retrieval:
 # https://stackoverflow.com/a/30761004
 NS_MAP = {
@@ -130,6 +97,7 @@ URL = {
     'card4l_nrb': 'https://ceos.org/ard/files/PFS/NRB/v5.5/CARD4L-PFS_NRB_v5.5.pdf',
     'card4l_orb': 'https://ceos.org/ard/files/PFS/ORB/v1.0/'
                   'CARD4L_Product_Family_Specification_Ocean_Radar_Backscatter-v1.0.pdf',
+    'egm2008': 'https://doi.org/10.1029/2011JB008916',
     'griddingConventionURL': 'https://www.mgrs-data.org/data/documents/nga_mgrs_doc.pdf',
     'platformReference': {
         'envisat-1': 'https://database.eohandbook.com/database/missionsummary.aspx?missionID=2',
@@ -140,4 +108,37 @@ URL = {
         'sentinel-1c': 'https://database.eohandbook.com/database/missionsummary.aspx?missionID=577',
         'sentinel-1d': 'https://database.eohandbook.com/database/missionsummary.aspx?missionID=814'
     }
+}
+
+DEM_MAP = {
+    'GETASSE30':
+        {'access': 'https://step.esa.int/auxdata/dem/GETASSE30',
+         'ref': 'https://www.brockmann-consult.de/beam/doc/help/visat/GETASSE30ElevationModel.html',
+         'type': 'elevation',
+         'gsd': '30 arcsec',
+         'egm': None},
+    'Copernicus 10m EEA DEM':
+        {'access': 'ftps://cdsdata.copernicus.eu/DEM-datasets/COP-DEM_EEA-10-DGED/2021_1',
+         'ref': 'https://doi.org/10.5270/ESA-c5d3d65',
+         'type': 'surface',
+         'gsd': '10 m',
+         'egm': URL['egm2008']},
+    'Copernicus 30m Global DEM':
+        {'access': 'https://copernicus-dem-30m.s3.eu-central-1.amazonaws.com/',
+         'ref': 'https://copernicus-dem-30m.s3.amazonaws.com/readme.html',
+         'type': 'surface',
+         'gsd': '30 m',
+         'egm': URL['egm2008']},
+    'Copernicus 30m Global DEM II':
+        {'access': 'ftps://cdsdata.copernicus.eu/DEM-datasets/COP-DEM_GLO-30-DGED/2021_1',
+         'ref': 'https://doi.org/10.5270/ESA-c5d3d65',
+         'type': 'surface',
+         'gsd': '30 m',
+         'egm': URL['egm2008']},
+    'Copernicus 90m Global DEM II':
+        {'access': 'ftps://cdsdata.copernicus.eu/DEM-datasets/COP-DEM_GLO-90-DGED/2021_1',
+         'ref': 'https://doi.org/10.5270/ESA-c5d3d65',
+         'type': 'surface',
+         'gsd': '90 m',
+         'egm': URL['egm2008']}
 }
