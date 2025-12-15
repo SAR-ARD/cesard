@@ -1,6 +1,13 @@
 Changelog
 =========
 
+1.1.1 | 2025-12-15
+------------------
+
+* updated metadata links and extended tests (`#14 <https://github.com/SAR-ARD/cesard/pull/14>`_)
+
+`Full v1.1.1 Changelog <https://github.com/SAR-ARD/cesard/compare/v1.1.0...v1.1.1>`_
+
 1.1.0 | 2025-12-12
 ------------------
 
