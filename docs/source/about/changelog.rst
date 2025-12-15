@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.1.0 | 2025-12-15
+1.1.1 | 2025-12-15
 ------------------
 
 * updated metadata links and extended tests (`#14 <https://github.com/SAR-ARD/cesard/pull/14>`_)
