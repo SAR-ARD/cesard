@@ -53,8 +53,8 @@ def buffer_min_overlap(
         the buffering step size. If None, the step size is 0.1 % of the
         average rectangle corner length.
     """
-    geom1_crs = geom1.getProjection('epsg')
-    geom2_crs = geom2.getProjection('epsg')
+    geom1_crs = geom1.getProjection(type='epsg')
+    geom2_crs = geom2.getProjection(type='epsg')
     if geom1_crs != geom2_crs:
         raise ValueError('both geometries must have the same CRS')
     geom2_area = geom2.getArea()
@@ -73,9 +73,9 @@ def buffer_min_overlap(
         ext2['xmax'] = ext['xmax'] + xbuf
         ext2['ymin'] = ext['ymin'] - ybuf
         ext2['ymax'] = ext['ymax'] + ybuf
-        with bbox(ext2, geom1_crs) as geom3:
+        with bbox(coordinates=ext2, crs=geom1_crs) as geom3:
             ext3 = geom3.extent
-            inter = intersect(geom2, geom3)
+            inter = intersect(obj1=geom2, obj2=geom3)
             if inter is not None:
                 inter_area = inter.getArea()
                 overlap = inter_area / geom2_area * 100
@@ -83,7 +83,7 @@ def buffer_min_overlap(
             else:
                 overlap = 0
         buffer += 1
-    return bbox(ext3, geom1_crs)
+    return bbox(coordinates=ext3, crs=geom1_crs)
 
 
 def buffer_time(
