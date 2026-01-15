@@ -34,7 +34,7 @@ def buffer_min_overlap(
         geom2: Vector,
         percent: int | float = 1,
         step: int | float | None = None
-) -> None:
+) -> Vector:
     """
     Buffer a rectangular geometry to a minimum overlap with a second geometry.
     The geometry is iteratively buffered until the minimum overlap is reached.
