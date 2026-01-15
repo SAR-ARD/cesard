@@ -75,9 +75,13 @@ def buffer_min_overlap(
         ext2['ymax'] = ext['ymax'] + ybuf
         with bbox(ext2, geom1_crs) as geom3:
             ext3 = geom3.extent
-            with intersect(geom2, geom3) as inter:
+            inter = intersect(geom2, geom3)
+            if inter is not None:
                 inter_area = inter.getArea()
                 overlap = inter_area / geom2_area * 100
+                inter.close()
+            else:
+                overlap = 0
         buffer += 1
     return bbox(ext3, geom1_crs)
 
