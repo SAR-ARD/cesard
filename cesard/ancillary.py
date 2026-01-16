@@ -483,12 +483,15 @@ def get_kml() -> str:
     local_path = os.path.join(os.path.expanduser('~'), '.cesard')
     os.makedirs(local_path, exist_ok=True)
     local = os.path.join(local_path, os.path.basename(remote).replace('.zip', '.kml'))
+    if os.path.isfile(local):
+        with Lock(local, soft=True):
+            return local
+    
     with Lock(local):
-        if not os.path.isfile(local):
-            log.info(f'downloading MGRS grid KML file to {local_path}')
-            r = requests.get(remote)
-            with zipfile.ZipFile(io.BytesIO(r.content)) as zf:
-                zf.extractall(local_path)
+        log.info(f'downloading MGRS grid KML file to {local_path}')
+        r = requests.get(remote)
+        with zipfile.ZipFile(io.BytesIO(r.content)) as zf:
+            zf.extractall(local_path)
     return local
 
 
