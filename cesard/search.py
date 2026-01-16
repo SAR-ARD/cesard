@@ -335,7 +335,7 @@ def scene_select(
     -------
         a tuple containing
     
-        - the list of return values; single value:string, multiple values: tuple
+        - the list of return values; single value: string, multiple values: tuple
         - the list of MGRS tiles
     
     """
@@ -395,6 +395,8 @@ def scene_select(
         args['return_value'] = ['mindate', 'maxdate', 'geometry_wkt']
         selection_tmp = archive.select(**args)
         log.debug(f'got {len(selection_tmp)} scenes')
+        if len(selection_tmp) == 0:
+            return [], []
         mindates, maxdates, geometries_init = zip(*selection_tmp)
         # The geometry of scenes crossing the antimeridian is stored as multipolygon.
         # Since the processor is currently not able to process these scenes, they are
