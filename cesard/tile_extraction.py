@@ -97,10 +97,12 @@ def aoi_from_tile(
     Parameters
     ----------
     tile:
-        The MGRS tile ID(s) that should be extracted and returned as a vector object.
-        Can also be expressed as <tile ID>_<EPSG code> (e.g. `33TUN_32632`). In this case the geometry
-        of the tile is reprojected to the target EPSG code, its corner coordinates rounded to multiples
-        of 10, and a new :class:`~spatialist.vector.Vector` object created.
+        The MGRS tile ID(s) that should be extracted and returned as a
+        vector object. Can also be expressed as <tile ID>_<EPSG code>
+        (e.g. `33TUN_32632`). In this case the geometry of the tile is
+        reprojected to the target EPSG code, its corner coordinates rounded
+        to multiples of 10, and a new :class:`~spatialist.vector.Vector`
+        object created.
     
     Returns
     -------
@@ -109,6 +111,9 @@ def aoi_from_tile(
     kml = get_kml()
     if isinstance(tile, str):
         tile = [tile]
+    
+    if len(tile) == 0:
+        raise RuntimeError("'tile' is empty")
     
     tilenames = []
     epsg_codes = []
