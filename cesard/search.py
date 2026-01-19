@@ -335,10 +335,11 @@ def scene_select(
     -------
         a tuple containing
     
-        - the list of return values; single value:string, multiple values: tuple
+        - the list of return values; single value: string, multiple values: tuple
         - the list of MGRS tiles
     
     """
+    
     args = kwargs.copy()
     if 'mindate' in args.keys():
         args['mindate'] = date_to_utc(args['mindate'], as_datetime=True)
@@ -393,17 +394,13 @@ def scene_select(
     if vec is None:
         log.debug("performing initial scene search without geometry constraint")
         args['return_value'] = ['mindate', 'maxdate', 'geometry_wkt']
-        selection_tmp = archive.select(**args)
-        log.debug(f'got {len(selection_tmp)} scenes')
-        mindates, maxdates, geometries_init = zip(*selection_tmp)
-        # The geometry of scenes crossing the antimeridian is stored as multipolygon.
-        # Since the processor is currently not able to process these scenes, they are
-        # removed in this step.
-        geometries = [x for x in geometries_init if x.startswith('POLYGON')]
-        if len(geometries) < len(geometries_init):
-            log.debug(f'removed {len(geometries_init) - len(geometries)} '
-                      f'scenes crossing the antimeridian')
-        del selection_tmp
+        selection = archive.select(**args)
+        log.debug(f'got {len(selection)} scenes')
+        if len(selection) == 0:
+            return [], []
+        
+        mindates, maxdates, geometries = zip(*selection)
+        del selection
         
         log.debug(f"loading geometries")
         scenes_geom = [wkt2vector(x, srs=4326) for x in geometries]
@@ -429,7 +426,7 @@ def scene_select(
         args['maxdate'] += timedelta(minutes=1)
     
     args['return_value'] = return_values.copy()
-    for key in ['mindate', 'maxdate']:
+    for key in ['mindate', 'maxdate', 'geometry_wkt']:
         if key not in args['return_value']:
             args['return_value'].append(key)
     
