@@ -339,13 +339,6 @@ def scene_select(
         - the list of MGRS tiles
     
     """
-    def filter_antimeridian(selection, index):
-        # The geometry of scenes crossing the antimeridian is stored as multipolygon.
-        out = [x for x in selection if x[index].startswith('POLYGON')]
-        if len(out) < len(selection):
-            log.debug(f'removed {len(selection) - len(out)} '
-                      f'scene(s) crossing the antimeridian')
-        return out
     
     args = kwargs.copy()
     if 'mindate' in args.keys():
@@ -405,9 +398,6 @@ def scene_select(
         log.debug(f'got {len(selection)} scenes')
         if len(selection) == 0:
             return [], []
-        # Since the processor is currently not able to process scenes
-        # crossing the antimeridian, they are removed in this step.
-        selection = filter_antimeridian(selection, index=2)
         
         mindates, maxdates, geometries = zip(*selection)
         del selection
@@ -445,10 +435,6 @@ def scene_select(
         args['vectorobject'] = combined
         selection = archive.select(**args)
     del vec
-    
-    # second antimeridian filtering on the main search result
-    rv_geom_key = args['return_value'].index('geometry_wkt')
-    selection = filter_antimeridian(selection, index=rv_geom_key)
     
     # reduce the selection to the time range defined by the user
     if mindate_init is not None or maxdate_init is not None:
