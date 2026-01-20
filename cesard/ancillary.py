@@ -436,6 +436,26 @@ def date_to_utc(
     return out
 
 
+def defaultdict_to_dict(
+        d: defaultdict,
+) -> dict:
+    """
+    Convert a (nested) defaultdict to a regular dictionary.
+    
+    Parameters
+    ----------
+    d:
+        the defaultdict to convert
+
+    Returns
+    -------
+        the converted dictionary
+    """
+    if isinstance(d, (dict, defaultdict)):
+        return {k: defaultdict_to_dict(v) for k, v in d.items()}
+    return d
+
+
 def generate_unique_id(
         encoded_str: bytes,
         length: int = 4
