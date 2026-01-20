@@ -486,7 +486,10 @@ def product_json(
     #################################################################################
     # Add assets
     assets = assets.copy()
-    assets.append(outname.replace('.json', '.xml'))
+    
+    xml = outname.replace('.json', '.xml')
+    if os.path.isfile(xml):
+        assets.append(xml)
     
     assets_dict = {'measurement': {},
                    'annotation': {},
