@@ -1,6 +1,13 @@
 Changelog
 =========
 
+1.2.1 | 2025-01-22
+------------------
+
+* [search.scene_select] add missing temporary return value (`#26 <https://github.com/SAR-ARD/cesard/pull/26>`_)
+
+`Full v1.2.1 Changelog <https://github.com/SAR-ARD/cesard/compare/v1.2.0...v1.2.1>`_
+
 1.2.0 | 2025-01-22
 ------------------
 
