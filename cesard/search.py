@@ -426,7 +426,7 @@ def scene_select(
         args['maxdate'] += timedelta(minutes=1)
     
     args['return_value'] = return_values.copy()
-    for key in ['mindate', 'maxdate', 'geometry_wkt']:
+    for key in ['mindate', 'maxdate', 'geometry_wkt', 'scene']:
         if key not in args['return_value']:
             args['return_value'].append(key)
     
