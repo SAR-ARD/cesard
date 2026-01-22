@@ -1,6 +1,20 @@
 Changelog
 =========
 
+1.2.0 | 2025-01-22
+------------------
+
+* [buffer_min_overlap] bug fixes and code improvements (`#18 <https://github.com/SAR-ARD/cesard/pull/18>`_)
+* Optimize KML file locking (`#17 <https://github.com/SAR-ARD/cesard/pull/17>`_)
+* [search.scene_select] bug fixes, remove antimeridian filtering (`#19 <https://github.com/SAR-ARD/cesard/pull/19>`_)
+* [aoi_from_tile] raise error when 'tile' is empty, reformat docs (`#20 <https://github.com/SAR-ARD/cesard/pull/20>`_)
+* [calc_product_start_stop] fixed bug by requiring pyroSAR>=0.33.1 (`#21 <https://github.com/SAR-ARD/cesard/pull/21>`_)
+* [ancillary.defaultdict_to_dict] new function (`#22 <https://github.com/SAR-ARD/cesard/pull/22>`_)
+* [metadata.stac.product_json] only add XML asset if it exists (`#23 <https://github.com/SAR-ARD/cesard/pull/23>`_)
+* update license year and introduce test to auto-check it (`#24 <https://github.com/SAR-ARD/cesard/pull/24>`_)
+
+`Full v1.2.0 Changelog <https://github.com/SAR-ARD/cesard/compare/v1.1.1...v1.2.0>`_
+
 1.1.1 | 2025-12-15
 ------------------
 
