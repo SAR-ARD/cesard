@@ -1,6 +1,13 @@
 Changelog
 =========
 
+1.2.2 | 2026-02-13
+------------------
+
+* require pyroSAR>=3.34.2 (`#28 <https://github.com/SAR-ARD/cesard/pull/28>`_)
+
+`Full v1.2.2 Changelog <https://github.com/SAR-ARD/cesard/compare/v1.2.1...v1.2.2>`_
+
 1.2.1 | 2025-01-22
 ------------------
 
