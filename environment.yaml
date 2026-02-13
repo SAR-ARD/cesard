@@ -11,7 +11,7 @@ dependencies:
   - pandas
   - pip
   - pyproj
-  - pyroSAR>=0.33.1
+  - pyroSAR>=0.34.2
   - pystac>=1.8.0,<1.11.0
   - python>=3.10
   - python-dateutil

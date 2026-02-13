@@ -112,10 +112,8 @@ def version_dict() -> dict[str, str]:
     """
     try:
         snap_config = ExamineSnap()
-        core = snap_config.get_version('core')
-        microwavetbx = snap_config.get_version('microwavetbx')
-        snap_core = f"{core['version']} | {core['date']}"
-        snap_microwavetbx = f"{microwavetbx['version']} | {microwavetbx['date']}"
+        snap_core = snap_config.get_version('core')
+        snap_microwavetbx = snap_config.get_version('microwavetbx')
     except RuntimeError:
         snap_core = 'unknown'
         snap_microwavetbx = 'unknown'
