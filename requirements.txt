@@ -3,7 +3,7 @@ gdal>=3.5.0
 geopandas
 lxml
 multiformats>=0.3.1
-numpy<2.0
+numpy
 pandas
 pyproj
 pyroSAR>=0.34.2

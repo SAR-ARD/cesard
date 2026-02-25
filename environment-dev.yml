@@ -1,4 +1,4 @@
-name: s1ard_dev
+name: cesard_dev
 channels:
   - conda-forge
 dependencies:
@@ -7,7 +7,7 @@ dependencies:
   - geopandas
   - lxml
   - multiformats>=0.3.1
-  - numpy<2.0
+  - numpy
   - pandas
   - pip
   - pyproj
