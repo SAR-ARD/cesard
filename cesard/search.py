@@ -1,3 +1,4 @@
+from __future__ import annotations
 import os
 import re
 import inspect
@@ -9,6 +10,7 @@ from pyroSAR.drivers import ID
 from pyroSAR.archive import SceneArchive
 from cesard.ancillary import date_to_utc, combine_polygons
 from cesard.tile_extraction import aoi_from_tile, tile_from_aoi
+from types import TracebackType
 from typing import Any
 import logging
 
@@ -83,10 +85,15 @@ class ASFArchive(SceneArchive):
     Search for scenes in the Alaska Satellite Facility (ASF) catalog.
     """
     
-    def __enter__(self):
+    def __enter__(self) -> ASFArchive:
         return self
     
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+            self,
+            exc_type: type[BaseException] | None,
+            exc_val: BaseException | None,
+            exc_tb: TracebackType | None,
+    ) -> None:
         return
     
     @staticmethod
