@@ -159,7 +159,7 @@ def check_spacing(
 
     Parameters
     ----------
-    spacing: int or float
+    spacing:
         the target pixel spacing in meters
 
     """

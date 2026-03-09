@@ -299,7 +299,7 @@ def product_json(
         target: str,
         assets: list[str],
         exist_ok: bool = False
-):
+) -> None:
     """
     Function to generate product-level metadata for an ARD product in STAC compliant JSON format.
     
