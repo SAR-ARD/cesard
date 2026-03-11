@@ -6,7 +6,7 @@ multiformats>=0.3.1
 numpy
 pandas
 pyproj
-pyroSAR>=0.34.2
+pyroSAR>=0.35.0
 pystac>=1.8.0,<1.11.0
 python-dateutil
 requests

@@ -1,3 +1,4 @@
+from __future__ import annotations
 import os
 import re
 import inspect
@@ -6,16 +7,14 @@ from datetime import datetime, timedelta
 from spatialist.vector import Vector, crsConvert, wkt2vector
 import asf_search as asf
 from pyroSAR.drivers import ID
+from pyroSAR.archive import SceneArchive
 from cesard.ancillary import date_to_utc, combine_polygons
 from cesard.tile_extraction import aoi_from_tile, tile_from_aoi
-from typing import Any, Literal
+from types import TracebackType
+from typing import Any
 import logging
 
 log = logging.getLogger('cesard')
-
-SENSOR = Literal["S1A", "S1B", "S1C", "S1D"]
-PRODUCT = Literal["GRD", "SLC"]
-ACQUISITION_MODE = Literal["IW", "EW", "SM"]
 
 
 class ASF(ID):
@@ -81,22 +80,27 @@ class ASF(ID):
         return meta
 
 
-class ASFArchive(object):
+class ASFArchive(SceneArchive):
     """
     Search for scenes in the Alaska Satellite Facility (ASF) catalog.
     """
     
-    def __enter__(self):
+    def __enter__(self) -> ASFArchive:
         return self
     
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+            self,
+            exc_type: type[BaseException] | None,
+            exc_val: BaseException | None,
+            exc_tb: TracebackType | None,
+    ) -> None:
         return
     
     @staticmethod
     def select(
-            sensor: SENSOR | None = None,
-            product: PRODUCT | None = None,
-            acquisition_mode: ACQUISITION_MODE | None = None,
+            sensor: str | list[str] | None = None,
+            product: str | list[str] | None = None,
+            acquisition_mode: str | list[str] | None = None,
             mindate: str | datetime | None = None,
             maxdate: str | datetime | None = None,
             vectorobject: Vector | None = None,
@@ -145,9 +149,9 @@ class ASFArchive(object):
 
 
 def asf_select(
-        sensor: SENSOR | None = None,
-        product: PRODUCT | None = None,
-        acquisition_mode: ACQUISITION_MODE | None = None,
+        sensor: str | list[str] | None = None,
+        product: str | list[str] | None = None,
+        acquisition_mode: str | list[str] | None = None,
         mindate: str | datetime | None = None,
         maxdate: str | datetime | None = None,
         vectorobject: Vector | None = None,
@@ -279,7 +283,7 @@ def asf_select(
 
 
 def scene_select(
-        archive: Any,
+        archive: SceneArchive,
         aoi_tiles: list[str] | None = None,
         aoi_geometry: str | None = None,
         return_value: str | list[str] = 'scene',
@@ -316,8 +320,7 @@ def scene_select(
     Parameters
     ----------
     archive:
-        an open scene archive connection. pyroSAR.drivers.Archive or s1ard.search.STACArchive
-        or s1ard.search.STACParquetArchive or ASFArchive.
+        an open scene archive connection.
     aoi_tiles:
         a list of MGRS tile names for spatial search
     aoi_geometry:

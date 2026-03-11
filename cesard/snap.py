@@ -5,9 +5,8 @@ from spatialist.envi import HDRobject
 from spatialist.ancillary import finder
 from pyroSAR import identify, identify_many
 from pyroSAR.examine import ExamineSnap
-from pyroSAR.snap.auxil import gpt, parse_recipe, parse_node, \
-    mli_parametrize, geo_parametrize, \
-    sub_parametrize, erode_edges
+from pyroSAR.snap.auxil import (gpt, parse_recipe, parse_node, mli_parametrize,
+                                geo_parametrize, sub_parametrize, erode_edges)
 import cesard
 import logging
 
@@ -369,7 +368,8 @@ def mli(
 def postprocess(
         src: str,
         clean_edges: bool = True,
-        clean_edges_pixels: int = 4):
+        clean_edges_pixels: int = 4
+) -> None:
     """
     Performs edge cleaning and sets the nodata value in the output ENVI HDR files.
 
@@ -381,10 +381,6 @@ def postprocess(
         perform edge cleaning?
     clean_edges_pixels:
         the number of pixels to erode during edge cleaning.
-
-    Returns
-    -------
-
     """
     if clean_edges:
         erode_edges(src=src, only_boundary=True, pixels=clean_edges_pixels)
@@ -476,28 +472,25 @@ def sgr(
         dst: str,
         workflow: str,
         src_gamma: str | None = None,
-        gpt_args: list[str] | None = None):
+        gpt_args: list[str] | None = None
+) -> None:
     """
     Sigma-gamma ratio computation.
 
     Parameters
     ----------
-    src: str
+    src:
         the file name of the source scene. Both sigma and gamma bands are expected unless `src_gamma` is defined.
-    dst: str
+    dst:
         the file name of the target scene. Format is BEAM-DIMAP.
-    workflow: str
+    workflow:
         the output SNAP XML workflow filename.
-    src_gamma: str or None
+    src_gamma:
         the optional file name of a second source product from which to read the gamma band.
-    gpt_args: list[str] or None
+    gpt_args:
         a list of additional arguments to be passed to the gpt call
         
         - e.g. ``['-x', '-c', '2048M']`` for increased tile cache size and intermediate clearing
-    
-    Returns
-    -------
-
     """
     scene = identify(src)
     pol = scene.polarizations[0]
