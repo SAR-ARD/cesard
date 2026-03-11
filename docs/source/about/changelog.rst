@@ -1,6 +1,15 @@
 Changelog
 =========
 
+1.2.3 | 2026-03-11
+------------------
+
+* removed numpy version constraint (`#30 <https://github.com/SAR-ARD/cesard/pull/30>`_)
+* inherit pyroSAR SceneArchive interfacing protocol (`#31 <https://github.com/SAR-ARD/cesard/pull/31>`_)
+* dem.prepare: increased accuracy for geometry handling (`#32 <https://github.com/SAR-ARD/cesard/pull/32>`_)
+
+`Full v1.2.3 Changelog <https://github.com/SAR-ARD/cesard/compare/v1.2.2...v1.2.3>`_
+
 1.2.2 | 2026-02-13
 ------------------
 
