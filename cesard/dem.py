@@ -189,15 +189,18 @@ def prepare(
             epsg = aoi['epsg']
             # reduce DEM extent to image extent but keep coordinates a multiple of 60
             # to fit into the MGRS tile boundaries
-            with scene.bbox() as vec_scene:
-                vec_scene.reproject(epsg)
-                with bbox(coordinates=ext, crs=epsg) as vec_tiles:
-                    with intersect(vec_scene, vec_tiles) as inter:
-                        ext = inter.extent
-                        ext['xmin'] = ext['xmin'] // 60 * 60
-                        ext['ymin'] = ext['ymin'] // 60 * 60 + 60
-                        ext['xmax'] = ext['xmax'] // 60 * 60
-                        ext['ymax'] = ext['ymax'] // 60 * 60 + 60
+            with scene.geometry() as vec_scene_geom:
+                # reprojecting the geometry and then getting the bounding box from this
+                # is more accurate than reprojecting the bounding box right away.
+                vec_scene_geom.reproject(epsg)
+                with vec_scene_geom.bbox() as vec_scene:
+                    with bbox(coordinates=ext, crs=epsg) as vec_tiles:
+                        with intersect(vec_scene, vec_tiles) as inter:
+                            ext = inter.extent
+                            ext['xmin'] = ext['xmin'] // 60 * 60
+                            ext['ymin'] = ext['ymin'] // 60 * 60 + 60
+                            ext['xmax'] = ext['xmax'] // 60 * 60
+                            ext['ymax'] = ext['ymax'] // 60 * 60 + 60
             fname_base_dem = f'DEM_{dem_type_short}_{epsg}.tif'
             fname_dem_tmp = os.path.join(dir_out, fname_base_dem)
             fname_dem.append(fname_dem_tmp)
