@@ -159,7 +159,7 @@ def check_spacing(
 
     Parameters
     ----------
-    spacing: int or float
+    spacing:
         the target pixel spacing in meters
 
     """
@@ -167,12 +167,13 @@ def check_spacing(
     # the overlap between tiles is either 9780 or 9840 m.
     overlap_edges = [9780, 9840, 109800]
     options = []
-    for i in range(1, (spacing + 1) * 10):
+    for i in range(1, 61 * 10): # 60 is the largest spacing
         if all([x % (i / 10) == 0 for x in overlap_edges]):
             options.append(i / 10)
     if spacing not in options:
         raise RuntimeError(f'target spacing of {spacing} m does not align '
-                           f'with MGRS tile size and overlaps.\nOptions: {options}')
+                           f'with the S2-MGRS tile size and overlaps.\n'
+                           f'Options: {options}')
 
 
 def combine_polygons(
