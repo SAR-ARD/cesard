@@ -558,8 +558,9 @@ def create_acq_id_image(
     
     arr_list = []
     for dataset in datasets:
-        vrt_valid = '/vsimem/' + os.path.dirname(outname) + 'mosaic.vrt'
-        gdalbuildvrt(src=dataset['datamask'], dst=vrt_valid, outputBounds=tile_bounds, void=False)
+        vrt_valid = '/vsimem/' + os.path.dirname(outname) + '/mosaic.vrt'
+        gdalbuildvrt(src=dataset['datamask'], dst=vrt_valid,
+                     outputBounds=tile_bounds, void=False)
         with bbox(extent, crs=epsg) as tile_vec:
             with Raster(vrt_valid)[tile_vec] as vrt_ras:
                 vrt_arr = vrt_ras.array()
@@ -567,15 +568,15 @@ def create_acq_id_image(
                 del vrt_arr
             tile_vec = None
     
-    src_scenes_clean = [os.path.basename(src).replace('.zip', '').replace('.SAFE', '') for src in src_scenes]
-    tag = '{{"{src1}": 1}}'.format(src1=src_scenes_clean[0])
     out_arr = np.full(arr_list[0].shape, dst_nodata)
+    src_scenes_clean = [os.path.basename(src).split('.')[0] for src in src_scenes]
+    tag = f'{{"{src_scenes_clean[0]}": 1}}'
     out_arr[arr_list[0] == 1] = 1
     if len(arr_list) == 2:
         out_arr[arr_list[1] == 1] = 2
-        tag = '{{"{src1}": 1, "{src2}": 2}}'.format(src1=src_scenes_clean[0], src2=src_scenes_clean[1])
+        tag = f'{{"{src_scenes_clean[0]}": 1, "{src_scenes_clean[1]}": 2}}'
     
-    creation_opt.append('TIFFTAG_IMAGEDESCRIPTION={}'.format(tag))
+    creation_opt.append(f'TIFFTAG_IMAGEDESCRIPTION={tag}')
     with Raster(ref_tif) as ref_ras:
         ref_ras.write(outname, format=driver, array=out_arr.astype('uint8'), nodata=dst_nodata, overwrite=True,
                       overviews=overviews, options=creation_opt)
