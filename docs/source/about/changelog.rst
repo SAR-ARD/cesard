@@ -1,6 +1,13 @@
 Changelog
 =========
 
+1.2.4 | 2026-04-13
+------------------
+
+* create_acq_id_image bugfix: do not inherit dtype from reference (`#34 <https://github.com/SAR-ARD/cesard/pull/34>`_)
+
+`Full v1.2.4 Changelog <https://github.com/SAR-ARD/cesard/compare/v1.2.3...v1.2.4>`_
+
 1.2.3 | 2026-03-11
 ------------------
 
