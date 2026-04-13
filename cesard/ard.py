@@ -568,9 +568,9 @@ def create_acq_id_image(
                 del vrt_arr
             tile_vec = None
     
-    out_arr = np.full(arr_list[0].shape, dst_nodata)
     src_scenes_clean = [os.path.basename(src).split('.')[0] for src in src_scenes]
     tag = f'{{"{src_scenes_clean[0]}": 1}}'
+    out_arr = np.full(shape=arr_list[0].shape, fill_value=dst_nodata, dtype='uint8')
     out_arr[arr_list[0] == 1] = 1
     if len(arr_list) == 2:
         out_arr[arr_list[1] == 1] = 2
@@ -578,5 +578,5 @@ def create_acq_id_image(
     
     creation_opt.append(f'TIFFTAG_IMAGEDESCRIPTION={tag}')
     with Raster(ref_tif) as ref_ras:
-        ref_ras.write(outname, format=driver, array=out_arr.astype('uint8'), nodata=dst_nodata, overwrite=True,
-                      overviews=overviews, options=creation_opt)
+        ref_ras.write(outname=outname, format=driver, array=out_arr, nodata=dst_nodata,
+                      overwrite=True, overviews=overviews, options=creation_opt)
