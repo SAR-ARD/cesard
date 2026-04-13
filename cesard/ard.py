@@ -578,5 +578,6 @@ def create_acq_id_image(
     
     creation_opt.append(f'TIFFTAG_IMAGEDESCRIPTION={tag}')
     with Raster(ref_tif) as ref_ras:
-        ref_ras.write(outname=outname, format=driver, array=out_arr, nodata=dst_nodata,
-                      overwrite=True, overviews=overviews, options=creation_opt)
+        ref_ras.write(outname=outname, format=driver, array=out_arr,
+                      dtype=str(out_arr.dtype), nodata=dst_nodata, overwrite=True,
+                      overviews=overviews, options=creation_opt)
