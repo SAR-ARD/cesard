@@ -563,7 +563,7 @@ def create_acq_id_image(
                      outputBounds=tile_bounds, void=False)
         with bbox(extent, crs=epsg) as tile_vec:
             with Raster(vrt_valid)[tile_vec] as vrt_ras:
-                vrt_arr = vrt_ras.array()
+                vrt_arr = vrt_ras.array(mask_nan=False)
                 arr_list.append(vrt_arr)
                 del vrt_arr
             tile_vec = None
