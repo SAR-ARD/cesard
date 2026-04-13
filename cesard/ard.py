@@ -532,17 +532,21 @@ def create_acq_id_image(
     ref_tif:
         Full path to any GeoTIFF file of the ARD product.
     datasets:
-        List of processed output files that match the source SLC scenes and overlap with the current MGRS tile.
+        List of processed output files that match the source products and
+        overlap with the current MGRS tile.
     src_ids:
-        List of :class:`~pyroSAR.drivers.ID` objects of all source SLC scenes that overlap with the current MGRS tile.
+        List of :class:`~pyroSAR.drivers.ID` objects of all source products
+        that overlap with the current MGRS tile.
     extent:
-        Spatial extent of the MGRS tile, derived from a :class:`~spatialist.vector.Vector` object.
+        Spatial extent of the MGRS tile, derived from a
+        :class:`~spatialist.vector.Vector` object.
     epsg:
         The CRS used for the ARD product; provided as an EPSG code.
     driver:
         GDAL driver to use for raster file creation.
     creation_opt:
-        GDAL creation options to use for raster file creation. Should match specified GDAL driver.
+        GDAL creation options to use for raster file creation.
+        Should match specified GDAL driver.
     overviews:
         Internal overview levels to be created for each raster file.
     dst_nodata:
