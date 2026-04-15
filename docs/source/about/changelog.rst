@@ -1,6 +1,13 @@
 Changelog
 =========
 
+1.2.5 | 2026-04-15
+------------------
+
+* require spatialist>=0.19.0 (`#36 <https://github.com/SAR-ARD/cesard/pull/36>`_)
+
+`Full v1.2.5 Changelog <https://github.com/SAR-ARD/cesard/compare/v1.2.4...v1.2.5>`_
+
 1.2.4 | 2026-04-13
 ------------------
 
