@@ -11,4 +11,4 @@ pystac>=1.8.0,<1.11.0
 python-dateutil
 requests
 scipy
-spatialist>=0.16.0
+spatialist>=0.19.0
