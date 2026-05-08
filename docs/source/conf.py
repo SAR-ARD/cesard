@@ -19,7 +19,7 @@ version = '.'.join(version_full.split('.')[:2])
 # release is automatically added to the latex document title and header
 release = version
 
-autodoc_mock_imports = ['osgeo', 'pyproj', 'multiformats']
+autodoc_mock_imports = ['pyproj', 'multiformats']
 
 # If your documentation needs a minimal Sphinx version, state it here.
 needs_sphinx = '1.6'
@@ -47,7 +47,6 @@ autosummary_generate = True
 
 intersphinx_mapping = {
     'dateutil': ('https://dateutil.readthedocs.io/en/stable', None),
-    'duckdb': ('https://duckdb.org/docs/stable/clients/python/reference', None),
     'multiformats': ('https://multiformats.readthedocs.io/en/stable', None),
     'osgeo': ('https://gdal.org/en/stable', None),
     'pyproj': ('https://pyproj4.github.io/pyproj/stable', None),

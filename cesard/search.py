@@ -391,14 +391,14 @@ def scene_select(
         
         if aoi_tiles is None:
             aoi_tiles = [x.mgrs for x in vec]
-        log.debug(f"got {len(aoi_tiles)} tiles")
+        log.debug(f"got {len(aoi_tiles)} tile(s)")
     
     # derive geometries and tiles from scene footprints
     if vec is None:
         log.debug("performing initial scene search without geometry constraint")
         args['return_value'] = ['mindate', 'maxdate', 'geometry_wkt']
         selection = archive.select(**args)
-        log.debug(f'got {len(selection)} scenes')
+        log.debug(f'got {len(selection)} scene(s)')
         if len(selection) == 0:
             return [], []
         
@@ -408,13 +408,13 @@ def scene_select(
         log.debug(f"loading geometries")
         scenes_geom = [wkt2vector(x, srs=4326) for x in geometries]
         # select all tiles overlapping with the scenes for further processing
-        log.debug("extracting all tiles overlapping with initial scene selection")
+        log.debug("extracting all tiles overlapping with the initial scene selection")
         vec = tile_from_aoi(vector=scenes_geom,
                             return_geometries=True)
         if not isinstance(vec, list):
             vec = [vec]
         aoi_tiles = [x.mgrs for x in vec]
-        log.debug(f"got {len(aoi_tiles)} tiles")
+        log.debug(f"got {len(aoi_tiles)} tile(s)")
         del scenes_geom
         
         args['mindate'] = min([date_to_utc(x, as_datetime=True) for x in mindates])
@@ -466,5 +466,5 @@ def scene_select(
         selection = [scene[indices[0]] for scene in selection]
     else:
         selection = [tuple(scene[i] for i in indices) for scene in selection]
-    log.debug(f"got {len(selection)} scenes")
+    log.debug(f"got {len(selection)} scene(s)")
     return selection, aoi_tiles
