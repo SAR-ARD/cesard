@@ -45,7 +45,7 @@ def create_vrt(
     fun:
         A `PixelFunctionType` that should be applied on the fly when opening the VRT file. The function is applied to a
         band that derives its pixel information from the source bands. A list of possible options can be found here:
-        https://gdal.org/drivers/raster/vrt.html#default-pixel-functions.
+        https://gdal.org/en/stable/drivers/raster/vrt.html#built-in-pixel-functions.
         Furthermore, the option 'decibel' can be specified, which will implement a custom pixel function that uses
         Python code for decibel conversion (10*log10).
     relpaths:
