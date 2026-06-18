@@ -11,12 +11,15 @@ from multiformats import multihash
 import binascii
 from lxml import etree
 from datetime import datetime, timedelta, timezone
-from osgeo import ogr, osr
 from pyproj import Geod
+from shapely.geometry import MultiPolygon
+import geopandas as gpd
+import pandas as pd
 import numpy as np
 import spatialist
 from spatialist.raster import Raster, rasterize
-from spatialist.vector import bbox, intersect, boundary, vectorize, Vector, crsConvert
+from spatialist.vector import (bbox, intersect, boundary, vectorize,
+                               Vector, from_geopandas)
 import pyroSAR
 from pyroSAR.ancillary import Lock, LockCollection
 from pyroSAR import identify_many
@@ -167,7 +170,7 @@ def check_spacing(
     # the overlap between tiles is either 9780 or 9840 m.
     overlap_edges = [9780, 9840, 109800]
     options = []
-    for i in range(1, 61 * 10): # 60 is the largest spacing
+    for i in range(1, 61 * 10):  # 60 is the largest spacing
         if all([x % (i / 10) == 0 for x in overlap_edges]):
             options.append(i / 10)
     if spacing not in options:
@@ -179,8 +182,8 @@ def check_spacing(
 def combine_polygons(
         vector: Vector | list[Vector],
         crs: int | str = 4326,
+        explode: bool = False,
         multipolygon: bool = False,
-        layer_name: str = 'combined'
 ) -> Vector:
     """
     Combine polygon vector objects into one.
@@ -189,75 +192,48 @@ def combine_polygons(
 
     Parameters
     ----------
-    vector:
-        the input vector object(s). Providing only one object only makes sense when `multipolygon=True`.
-    crs:
-        the target CRS. Default: EPSG:4326
-    multipolygon:
-        combine all polygons into one multipolygon?
+    vector
+        The input vector object(s).
+    crs
+        The target CRS.
+    explode
+        explode multipolygons into separate polygon features?
+        Ignored if `multipolygon=True`.
+    multipolygon
+        Combine all polygons into one multipolygon?
         Default False: write each polygon into a separate feature.
-    layer_name:
-        the layer name of the output vector object.
 
     Returns
     -------
-        the combined vector object
+        The combined vector object.
     """
     if not isinstance(vector, list):
-        vector = [vector]
-    ##############################################################################
-    # check geometry types
-    geometry_names = []
-    field_defs = []
-    for item in vector:
-        field_defs.extend(item.fieldDefs)
-        for feature in item.layer:
-            geom = feature.GetGeometryRef()
-            geometry_names.append(geom.GetGeometryName())
-        item.layer.ResetReading()
-    geom = None
-    geometry_names = list(set(geometry_names))
-    if not all(x == 'POLYGON' for x in geometry_names):
-        raise RuntimeError('All geometries must be of type POLYGON')
-    ##############################################################################
-    vec = Vector(driver='Memory')
-    srs_out = crsConvert(crs, 'osr')
-    if multipolygon:
-        geom_type = ogr.wkbMultiPolygon
-        geom_out = [ogr.Geometry(geom_type)]
+        gdfs = [vector.to_geopandas()]
     else:
-        geom_type = ogr.wkbPolygon
-        geom_out = []
-    fields = []
-    vec.addlayer(name=layer_name, srs=srs_out, geomType=geom_type)
-    for item in vector:
-        fieldnames = item.fieldnames
-        if item.srs.IsSame(srs_out):
-            coord_trans = None
-        else:
-            coord_trans = osr.CoordinateTransformation(item.srs, srs_out)
-        for feature in item.layer:
-            geom = feature.GetGeometryRef()
-            if coord_trans is not None:
-                geom.Transform(coord_trans)
-            if multipolygon:
-                geom_out[0].AddGeometry(geom.Clone())
-            else:
-                fields.append({x: feature.GetField(x) for x in fieldnames})
-                geom_out.append(geom.Clone())
-        item.layer.ResetReading()
-    geom = None
-    if multipolygon:
-        geom_out = geom_out[0].UnionCascaded()
-        vec.addfeature(geom_out)
-    else:
-        for field_def in field_defs:
-            if field_def.GetName() not in vec.fieldnames:
-                vec.layer.CreateField(field_def)
-        for i, geom in enumerate(geom_out):
-            vec.addfeature(geometry=geom, fields=fields[i])
-    geom_out = None
-    return vec
+        gdfs = [vector.to_geopandas() for vector in vector]
+    
+    combined = gpd.GeoDataFrame(
+        data=pd.concat(objs=[gdf.to_crs(crs) for gdf in gdfs],
+                       ignore_index=True),
+        crs=crs
+    )
+    
+    if not multipolygon:
+        if explode:
+            combined = combined.explode(index_parts=False, ignore_index=True)
+        return from_geopandas(combined)
+    
+    parts = []
+    
+    for geom in combined.geometry:
+        if geom.geom_type == "Polygon":
+            parts.append(geom)
+        elif geom.geom_type == "MultiPolygon":
+            parts.extend(geom.geoms)
+    
+    geom = MultiPolygon(parts)
+    
+    return from_geopandas(gpd.GeoDataFrame(geometry=[geom], crs=crs))
 
 
 def compute_hash(
