@@ -130,7 +130,7 @@ def prepare(
         tr: None | tuple[int | float, int | float] = None,
         username: str | None = None,
         password: str | None = None
-) -> list[str]:
+) -> str | list[str]:
     """
     Prepare DEM files for SAR processing.
 
@@ -156,7 +156,7 @@ def prepare(
 
     Returns
     -------
-        the names of the newly created DEM files.
+        the name(s) of the newly created DEM file(s).
     """
     dem_type_lookup = {'Copernicus 10m EEA DEM': 'EEA10',
                        'Copernicus 30m Global DEM II': 'GLO30II',
