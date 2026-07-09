@@ -100,24 +100,16 @@ def mosaic(
         username, password = authenticate(dem_type=dem_type,
                                           username=username,
                                           password=password)
-        if dem_type == 'GETASSE30':
-            geoid_convert = False
-        else:
-            geoid_convert = True
-        geoid = 'EGM2008'
-        vrt = outname.replace('.tif', '.vrt')
         if epsg != 4326:
             geometry = geometry.clone()
             geometry.reproject(4326)
-        dem_autoload([geometry], demType=dem_type,
-                     vrt=vrt, buffer=0.01, product='dem',
-                     username=username, password=password)
+        tiles = dem_autoload(geometries=[geometry], demType=dem_type,
+                             buffer=0.01, product='dem',
+                             username=username, password=password)
         bounds = [ext['xmin'], ext['ymin'], ext['xmax'], ext['ymax']]
-        dem_create(src=vrt, dst=outname, pbar=False, tr=tr,
-                   geoid_convert=geoid_convert, geoid=geoid,
-                   threads=threads, nodata=-32767, t_srs=epsg,
-                   outputBounds=bounds)
-        os.remove(vrt)
+        dem_create(geometries=[geometry], demType=dem_type, product='dem',
+                   src=tiles, dst=outname, t_srs=epsg, tr=tr, threads=threads,
+                   nodata=-32768, outputBounds=bounds)
         if epsg != 4326:
             geometry = None
 
