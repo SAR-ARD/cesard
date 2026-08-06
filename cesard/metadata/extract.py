@@ -3,53 +3,11 @@ import json
 import numpy as np
 from datetime import datetime
 from spatialist import Raster
-from spatialist.auxil import crsConvert
 from spatialist.vector import Vector
-from osgeo import gdal, ogr
+from osgeo import gdal
 from typing import Any
 
 gdal.UseExceptions()
-
-
-def vec_from_srccoords(
-        coord_list: list[list[tuple[float, float]]],
-        crs: int | str,
-        layername: str = 'polygon'
-) -> Vector:
-    """
-    Creates a single :class:`~spatialist.vector.Vector` object from a list
-    of footprint coordinates of source scenes.
-    
-    Parameters
-    ----------
-    coord_list:
-        List containing for each source scene a list of coordinate pairs as
-        retrieved from the metadata stored in an :class:`~pyroSAR.drivers.ID`
-        object.
-    crs:
-        the coordinate reference system of the provided coordinates.
-    layername:
-        the layer name of the output vector object
-    
-    Returns
-    -------
-        the vector object
-    """
-    srs = crsConvert(crs, 'osr')
-    pts = ogr.Geometry(ogr.wkbMultiPoint)
-    for footprint in coord_list:
-        for lon, lat in footprint:
-            point = ogr.Geometry(ogr.wkbPoint)
-            point.AddPoint(lon, lat)
-            pts.AddGeometry(point)
-    geom = pts.ConvexHull()
-    vec = Vector(driver='Memory')
-    vec.addlayer(layername, srs, geom.GetGeometryType())
-    vec.addfeature(geom)
-    point = None
-    pts = None
-    geom = None
-    return vec
 
 
 def geometry_from_vec(
