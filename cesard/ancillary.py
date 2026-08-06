@@ -18,8 +18,8 @@ import pandas as pd
 import numpy as np
 import spatialist
 from spatialist.raster import Raster, rasterize
-from spatialist.vector import (bbox, intersect, boundary, vectorize,
-                               Vector, from_geopandas)
+from spatialist.vector import (bbox, intersect, largest_polygon_exterior,
+                               vectorize, Vector, from_geopandas)
 import pyroSAR
 from pyroSAR.ancillary import Lock, LockCollection
 from pyroSAR import identify_many
@@ -338,7 +338,7 @@ def datamask(
         # vectorize the raster data mask
         with vectorize(target=arr, reference=ref) as vec:
             # compute a valid data boundary geometry (vector data mask)
-            with boundary(vec, expression="value=1") as bounds:
+            with largest_polygon_exterior(vec, expression="value=1") as bounds:
                 # rasterize the vector data mask
                 if not os.path.isfile(dm_ras):
                     rasterize(vectorobject=bounds, reference=ref,
