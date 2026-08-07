@@ -12,7 +12,8 @@ import binascii
 from lxml import etree
 from datetime import datetime, timedelta, timezone
 from pyproj import Geod
-from shapely.geometry import MultiPolygon
+from shapely.geometry import MultiPolygon, Polygon, LineString
+from shapely.ops import split, transform
 import geopandas as gpd
 import pandas as pd
 import numpy as np
@@ -30,6 +31,65 @@ log = logging.getLogger('cesard')
 
 T = TypeVar('T')  # any type
 K = TypeVar('K')  # key
+
+
+def _split_polygon_antimeridian(poly: Polygon) -> Polygon | MultiPolygon:
+    """Split a WGS84 polygon at the antimeridian. Helper function for _fix_antimeridian."""
+    
+    def shift_to_360(x, y, z=None):
+        x = x + 360 if x < 0 else x
+        return (x, y) if z is None else (x, y, z)
+    
+    def shift_to_180(x, y, z=None):
+        x = x - 360 if x > 180 else x
+        return (x, y) if z is None else (x, y, z)
+    
+    shifted = transform(shift_to_360, poly)
+    
+    # No crossing if the shifted polygon remains on one side of 180°.
+    minx, _, maxx, _ = shifted.bounds
+    if maxx <= 180 or minx >= 180:
+        return transform(shift_to_180, shifted)
+    
+    pieces = split(
+        shifted,
+        LineString([(180, -90), (180, 90)]),
+    )
+    
+    fixed = [
+        transform(shift_to_180, part)
+        for part in pieces.geoms
+        if not part.is_empty
+    ]
+    
+    if len(fixed) == 1:
+        return fixed[0]
+    
+    return MultiPolygon(fixed)
+
+
+def _fix_antimeridian(
+        geom: Polygon | MultiPolygon
+) -> Polygon | MultiPolygon:
+    """Helper function for combine_polygons to handle antimeridian-crossing geometries."""
+    if geom.is_empty:
+        return geom
+    
+    if not isinstance(geom, (Polygon, MultiPolygon)):
+        raise TypeError(f"Unsupported geometry type: {type(geom).__name__}")
+    
+    if isinstance(geom, Polygon):
+        return _split_polygon_antimeridian(geom)
+    
+    parts: list[Polygon] = []
+    for polygon in geom.geoms:
+        fixed = _split_polygon_antimeridian(polygon)
+        if isinstance(fixed, Polygon):
+            parts.append(fixed)
+        else:
+            parts.extend(fixed.geoms)
+    
+    return MultiPolygon(parts)
 
 
 def buffer_min_overlap(
@@ -213,27 +273,37 @@ def combine_polygons(
         gdfs = [vector.to_geopandas() for vector in vector]
     
     combined = gpd.GeoDataFrame(
-        data=pd.concat(objs=[gdf.to_crs(crs) for gdf in gdfs],
-                       ignore_index=True),
+        data=pd.concat(
+            objs=[gdf.to_crs(crs) for gdf in gdfs],
+            ignore_index=True
+        ),
         crs=crs
     )
     
+    combined["geometry"] = combined.geometry.map(_fix_antimeridian)
+    combined = combined.to_crs(crs)
+    
     if not multipolygon:
         if explode:
-            combined = combined.explode(index_parts=False, ignore_index=True)
+            combined = combined.explode(
+                index_parts=False,
+                ignore_index=True
+            )
         return from_geopandas(combined)
     
     parts = []
     
     for geom in combined.geometry:
-        if geom.geom_type == "Polygon":
+        if isinstance(geom, Polygon):
             parts.append(geom)
-        elif geom.geom_type == "MultiPolygon":
+        elif isinstance(geom, MultiPolygon):
             parts.extend(geom.geoms)
     
     geom = MultiPolygon(parts)
     
-    return from_geopandas(gpd.GeoDataFrame(geometry=[geom], crs=crs))
+    return from_geopandas(
+        gpd.GeoDataFrame(geometry=[geom], crs=crs)
+    )
 
 
 def compute_hash(
