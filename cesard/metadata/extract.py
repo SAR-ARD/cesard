@@ -4,7 +4,7 @@ import numpy as np
 from datetime import datetime
 from spatialist import Raster
 from spatialist.vector import Vector
-from osgeo import gdal
+from osgeo import gdal, ogr
 from typing import Any, TypedDict, NotRequired
 
 gdal.UseExceptions()
@@ -14,8 +14,48 @@ class GeometryInfo(TypedDict):
     bbox: list[int | float]
     bbox_native: NotRequired[list[int | float]]
     center: str
-    envelope: str
+    envelope: list[str]
     geometry: dict[str, Any]
+
+
+def _exterior_rings(geom: ogr.Geometry):
+    """Yield the exterior rings of Polygon and MultiPolygon geometries."""
+    geometry_type = geom.GetGeometryName()
+    
+    if geometry_type == 'POLYGON':
+        if geom.GetGeometryCount() > 0:
+            yield geom.GetGeometryRef(0)
+    
+    elif geometry_type == 'MULTIPOLYGON':
+        for i in range(geom.GetGeometryCount()):
+            polygon = geom.GetGeometryRef(i)
+            if polygon.GetGeometryCount() > 0:
+                yield polygon.GetGeometryRef(0)
+    
+    else:
+        raise TypeError(
+            f'expected Polygon or MultiPolygon geometry, got {geometry_type}'
+        )
+
+
+def _format_envelopes(geom: ogr.Geometry) -> list[str]:
+    """
+    Format each exterior ring as a separate ``latitude longitude`` string.
+
+    Returns
+    -------
+    list[str]
+        One coordinate string per polygon exterior ring. Coordinates are
+        formatted as ``latitude longitude`` pairs, as required by the XML
+        metadata writer.
+    """
+    return [
+        ' '.join(
+            f'{latitude} {longitude}'
+            for longitude, latitude, *_ in ring.GetPoints()
+        )
+        for ring in _exterior_rings(geom)
+    ]
 
 
 def geometry_from_vec(
@@ -86,10 +126,7 @@ def geometry_from_vec(
     center_y = (ext['ymax'] + ext['ymin']) / 2
     out['center'] = '{} {}'.format(center_y, center_x)
     
-    wkt = geom.ExportToWkt().removeprefix('POLYGON ((').removesuffix('))')
-    wkt_list = ['{} {}'.format(x[1], x[0])
-                for x in [y.split(' ') for y in wkt.split(',')]]
-    out['envelope'] = ' '.join(wkt_list)
+    out['envelope'] = _format_envelopes(geom)
     
     return out
 

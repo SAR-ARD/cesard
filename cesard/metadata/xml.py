@@ -753,7 +753,7 @@ def _om_feature_of_interest(
         root: etree.Element,
         nsmap: dict[str, str],
         scene_id: str,
-        extent: str,
+        extent: list[str],
         center: str
 ):
     """
@@ -768,26 +768,62 @@ def _om_feature_of_interest(
     scene_id:
         Scene basename.
     extent:
-        Footprint coordinates of the scene.
+        A list containing one whitespace-separated ``latitude longitude``
+        coordinate sequence for each polygon exterior ring.
     center:
-        Center coordinates of the footprint.
+        Center coordinate as a whitespace-separated ``latitude longitude``
+        string.
     """
     featureOfInterest = etree.SubElement(root, _nsc('om:featureOfInterest', nsmap))
-    footprint = etree.SubElement(featureOfInterest, _nsc('eop:Footprint', nsmap),
-                                 attrib={_nsc('gml:id', nsmap): scene_id + '_5'})
+    footprint = etree.SubElement(
+        featureOfInterest,
+        _nsc('eop:Footprint', nsmap),
+        attrib={_nsc('gml:id', nsmap): scene_id + '_5'}
+    )
     
-    multiExtentOf = etree.SubElement(footprint, _nsc('eop:multiExtentOf', nsmap))
-    multiSurface = etree.SubElement(multiExtentOf, _nsc('gml:MultiSurface', nsmap),
-                                    attrib={_nsc('gml:id', nsmap): scene_id + '_6'})
-    surfaceMember = etree.SubElement(multiSurface, _nsc('gml:surfaceMember', nsmap))
-    polygon = etree.SubElement(surfaceMember, _nsc('gml:Polygon', nsmap),
-                               attrib={_nsc('gml:id', nsmap): scene_id + '_7'})
-    exterior = etree.SubElement(polygon, _nsc('gml:exterior', nsmap))
-    linearRing = etree.SubElement(exterior, _nsc('gml:LinearRing', nsmap))
-    posList = etree.SubElement(linearRing, _nsc('gml:posList', nsmap))
-    posList.text = extent
+    multiExtentOf = etree.SubElement(
+        footprint,
+        _nsc('eop:multiExtentOf', nsmap)
+    )
     
-    centerOf = etree.SubElement(footprint, _nsc('eop:centerOf', nsmap))
-    point = etree.SubElement(centerOf, _nsc('gml:Point', nsmap), attrib={_nsc('gml:id', nsmap): scene_id + '_8'})
+    multiSurface = etree.SubElement(
+        multiExtentOf,
+        _nsc('gml:MultiSurface', nsmap),
+        attrib={_nsc('gml:id', nsmap): scene_id + '_6'}
+    )
+    
+    for index, envelope in enumerate(extent, start=1):
+        surfaceMember = etree.SubElement(
+            multiSurface,
+            _nsc('gml:surfaceMember', nsmap),
+        )
+        polygon = etree.SubElement(
+            surfaceMember,
+            _nsc('gml:Polygon', nsmap),
+            attrib={_nsc('gml:id', nsmap): f'{scene_id}_7_{index}'},
+        )
+        exterior = etree.SubElement(
+            polygon,
+            _nsc('gml:exterior', nsmap),
+        )
+        linearRing = etree.SubElement(
+            exterior,
+            _nsc('gml:LinearRing', nsmap),
+        )
+        posList = etree.SubElement(
+            linearRing,
+            _nsc('gml:posList', nsmap),
+        )
+        posList.text = envelope
+    
+    centerOf = etree.SubElement(
+        footprint,
+        _nsc('eop:centerOf', nsmap)
+    )
+    point = etree.SubElement(
+        centerOf,
+        _nsc('gml:Point', nsmap),
+        attrib={_nsc('gml:id', nsmap): scene_id + '_8'}
+    )
     pos = etree.SubElement(point, _nsc('gml:pos', nsmap))
     pos.text = center
