@@ -11,6 +11,7 @@ from multiformats import multihash
 import binascii
 from lxml import etree
 from datetime import datetime, timedelta, timezone
+from osgeo import osr
 from pyproj import Geod
 from shapely.geometry import MultiPolygon, Polygon, LineString
 from shapely.ops import split, transform
@@ -31,6 +32,8 @@ log = logging.getLogger('cesard')
 
 T = TypeVar('T')  # any type
 K = TypeVar('K')  # key
+CRS = int | str | osr.SpatialReference
+EXT = dict[str, int | float]
 
 
 def _split_polygon_antimeridian(poly: Polygon) -> Polygon | MultiPolygon:
@@ -93,60 +96,60 @@ def _fix_antimeridian(
 
 
 def buffer_min_overlap(
-        geom1: Vector,
-        geom2: Vector,
+        extent: EXT,
+        geometry: Vector,
         percent: int | float = 1,
         step: int | float | None = None
-) -> Vector:
+) -> EXT:
     """
-    Buffer a rectangular geometry to a minimum overlap with a second geometry.
-    The geometry is iteratively buffered until the minimum overlap is reached.
-    If the overlap of the input geometries is already larger than the defined
-    threshold, a copy of the original geometry is returned.
+    Buffer a rectangular extent to a minimum overlap with a geometry.
+    The extent is iteratively buffered until a minimum overlap with
+    the geometry is reached.
+    If the overlap is already larger than the defined threshold,
+    a copy of the original extent is returned.
 
     Parameters
     ----------
-    geom1:
-        the geometry to be buffered
-    geom2:
-        the reference geometry to intersect with
+    extent:
+        the extent to be buffered. Coordinates are expected to be in
+        the same CRS as the geometry.
+    geometry:
+        the reference geometry to intersect with. The CRS must be projected.
     percent:
-        the minimum overlap in percent of `geom1`
+        the minimum overlap in area percentage of `geometry`
     step:
         the buffering step size. If None, the step size is 0.1 % of the
         average rectangle corner length.
     """
-    geom1_crs = geom1.getProjection(type='epsg')
-    geom2_crs = geom2.getProjection(type='epsg')
-    if geom1_crs != geom2_crs:
-        raise ValueError('both geometries must have the same CRS')
-    geom2_area = geom2.getArea()
-    ext = geom1.extent
-    ext2 = ext.copy()
+    crs: osr.SpatialReference = geometry.getProjection(type='osr')
+    if not crs.IsProjected():
+        raise ValueError('CRS must be projected')
+    
+    geometry_area = geometry.getArea()
     if step is None:
-        xdist = ext['xmax'] - ext['xmin']
-        ydist = ext['ymax'] - ext['ymin']
+        xdist = extent['xmax'] - extent['xmin']
+        ydist = extent['ymax'] - extent['ymin']
         step = (xdist + ydist) / 2 / 1000
+    if step <= 0:
+        raise ValueError('step must be greater than 0')
     buffer = 0
     overlap = 0
+    extent_buffered = extent.copy()
     while overlap <= percent:
         xbuf = buffer * step
         ybuf = buffer * step
-        ext2['xmin'] = ext['xmin'] - xbuf
-        ext2['xmax'] = ext['xmax'] + xbuf
-        ext2['ymin'] = ext['ymin'] - ybuf
-        ext2['ymax'] = ext['ymax'] + ybuf
-        with bbox(coordinates=ext2, crs=geom1_crs) as geom3:
-            ext3 = geom3.extent
-            inter = intersect(obj1=geom2, obj2=geom3)
+        extent_buffered['xmin'] = extent['xmin'] - xbuf
+        extent_buffered['xmax'] = extent['xmax'] + xbuf
+        extent_buffered['ymin'] = extent['ymin'] - ybuf
+        extent_buffered['ymax'] = extent['ymax'] + ybuf
+        with bbox(coordinates=extent_buffered, crs=crs) as geom_buffered:
+            inter = intersect(obj1=geometry, obj2=geom_buffered)
             if inter is not None:
                 inter_area = inter.getArea()
-                overlap = inter_area / geom2_area * 100
+                overlap = inter_area / geometry_area * 100
                 inter.close()
-            else:
-                overlap = 0
         buffer += 1
-    return bbox(coordinates=ext3, crs=geom1_crs)
+    return extent_buffered
 
 
 def buffer_time(

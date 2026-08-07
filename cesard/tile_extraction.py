@@ -176,7 +176,7 @@ def aoi_from_scene(
         scene: ID,
         multi: bool = True,
         percent: int | float = 1
-) -> list[dict[str, dict[str, float] | int]]:
+) -> list[dict[str, dict[str, int | float] | int]]:
     """
     Get processing AOIs for a SAR scene. The MGRS grid requires a SAR
     scene to be geocoded to multiple UTM zones depending on the overlapping
@@ -188,7 +188,7 @@ def aoi_from_scene(
     - the EPSG code of the UTM zone (key `epsg`)
     
     A minimum overlap of the AOIs with the SAR scene is ensured by buffering
-    the AOIs if necessary. The minimum overlap can be controlled with
+    the AOIs if necessary. The minimum overlap can be controlled with the
     parameter `percent`.
     
     Parameters
@@ -196,12 +196,14 @@ def aoi_from_scene(
     scene:
         the SAR scene object
     multi:
-        split into multiple AOIs per overlapping UTM zone or just one AOI
-        covering the whole scene. In the latter case the best matching UTM
-        zone is auto-detected
-        (using function :func:`spatialist.auxil.utm_autodetect`).
+        split into multiple AOIs per overlapping UTM zone?
+        If `False`, just one AOI covering the whole scene is returned.
+        In this case the best matching UTM zone is auto-detected
+        (using function :func:`spatialist.auxil.utm_autodetect`)
+        and no buffering is performed.
     percent:
-        the minimum overlap in percent of each AOI with the SAR scene.
+        the minimum overlap in percentage of each AOI with the SAR scene.
+        Only applies if `multi=True`.
         See function :func:`cesard.ancillary.buffer_min_overlap`.
 
     Returns
@@ -225,20 +227,21 @@ def aoi_from_scene(
             # get maximum extent of tile group
             ext_utm = get_max_ext(geometries=geometries)
             del geometries
-            with bbox(ext_utm, epsg) as geom1:
-                # ensure a minimum overlap between AOI and pre-processed scene
-                with scene.geometry() as geom2:
-                    geom2.reproject(epsg)
-                    # 60 m to keep aligned to MGRS tile size and overlaps
-                    # see ancillary.check_spacing
-                    with buffer_min_overlap(geom1=geom1, geom2=geom2,
-                                            percent=percent, step=60) as buffered:
-                        ext_utm = buffered.extent
+            # ensure a minimum overlap between AOI and pre-processed scene
+            with scene.geometry() as geom:
+                geom.reproject(epsg)
+                # 60 m to keep aligned to MGRS tile size and overlaps
+                # see ancillary.check_spacing
+                ext_utm_buffered = buffer_min_overlap(
+                    extent=ext_utm, geometry=geom,
+                    percent=percent, step=60
+                )
                 # convert extent to EPSG:4326
-                geom1.reproject(projection=4326)
-                ext = geom1.extent
+                with bbox(coordinates=ext_utm_buffered, crs=epsg) as buffered:
+                    buffered.reproject(projection=4326)
+                    ext = buffered.extent
             out.append({'extent': ext, 'epsg': epsg,
-                        'extent_utm': ext_utm})
+                        'extent_utm': ext_utm_buffered})
     else:
         with scene.bbox() as geom:
             ext = geom.extent
