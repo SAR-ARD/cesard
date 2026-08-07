@@ -74,12 +74,13 @@ def mosaic(
     Parameters
     ----------
     geometry:
-        The geometry to be covered by the mosaic. The geometry's CRS is
-        used as target CRS.
+        The geometry to be covered by the mosaic.
+        The geometry's CRS is used as target CRS.
     dem_type:
         The DEM type.
+        See function :func:`pyroSAR.auxdata.dem_autoload` for options.
     outname:
-        The name of the mosaic.
+        The name of the mosaic file.
     tr:
         the target resolution as (xres, yres) in units of the target CRS.
     username:
@@ -94,24 +95,26 @@ def mosaic(
     threads:
         The number of threads to pass to :func:`pyroSAR.auxdata.dem_create`.
     """
-    epsg = geometry.getProjection('epsg')
-    ext = geometry.extent
     if not os.path.isfile(outname):
         username, password = authenticate(dem_type=dem_type,
                                           username=username,
                                           password=password)
+        geometry = geometry.wrap_dateline(inplace=False)
+        epsg = geometry.getProjection('epsg')
+        ext = geometry.extent
+        if ext['xmin'] > ext['xmax']:
+            raise RuntimeError('geometry crosses the antimeridian')
+        geometry_4326 = geometry.clone()
         if epsg != 4326:
-            geometry = geometry.clone()
-            geometry.reproject(4326)
-        tiles = dem_autoload(geometries=[geometry], demType=dem_type,
+            geometry_4326.reproject(4326)
+        tiles = dem_autoload(geometries=[geometry_4326], demType=dem_type,
                              buffer=0.01, product='dem',
                              username=username, password=password)
         bounds = [ext['xmin'], ext['ymin'], ext['xmax'], ext['ymax']]
         dem_create(geometries=[geometry], demType=dem_type, product='dem',
                    src=tiles, dst=outname, t_srs=epsg, tr=tr, threads=threads,
                    nodata=-32768, outputBounds=bounds)
-        if epsg != 4326:
-            geometry = None
+        geometry_4326.close()
 
 
 def prepare(
