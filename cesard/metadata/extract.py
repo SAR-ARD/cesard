@@ -5,16 +5,24 @@ from datetime import datetime
 from spatialist import Raster
 from spatialist.vector import Vector
 from osgeo import gdal
-from typing import Any
+from typing import Any, TypedDict, NotRequired
 
 gdal.UseExceptions()
 
 
+class GeometryInfo(TypedDict):
+    bbox: list[int | float]
+    bbox_native: NotRequired[list[int | float]]
+    center: str
+    envelope: str
+    geometry: dict[str, Any]
+
+
 def geometry_from_vec(
         vectorobject: Vector
-) -> dict[str, Any]:
+) -> GeometryInfo:
     """
-    Get geometry information for usage in STAC and XML metadata from a :class:`spatialist.vector.Vector` object.
+    Get geometry information for usage in STAC and XML metadata.
     
     Parameters
     ----------
@@ -23,10 +31,39 @@ def geometry_from_vec(
     
     Returns
     -------
-        A dictionary containing the geometry information extracted from the vector object.
+    GeometryInfo
+        A dictionary with the following keys:
+        
+        `bbox`:
+          The bounding box in EPSG:4326 coordinates,
+          in the order ``[xmin, ymin, xmax, ymax]``.
+        
+        `bbox_native`:
+          The bounding box in native coordinates
+          (only if input is not in EPSG:4326),
+          in the order ``[xmin, ymin, xmax, ymax]``.
+        
+        `center`:
+          The center point in EPSG:4326 coordinates
+          as a whitespace-separated string in the order ``"latitude longitude"``.
+        
+        `envelope`:
+          The exterior ring of the geometry as a whitespace-separated
+          sequence of EPSG:4326 coordinate pairs. Each coordinate
+          pair is formatted as ``"latitude longitude"`` and coordinate pairs
+          are separated by a single space.
+        
+        `geometry`:
+          The geometry in EPSG:4326 GeoJSON format.
+    
+    Notes
+    -----
+    The extent and center calculation uses
+    :attr:`spatialist.vector.Vector.extent`, which preserves antimeridian
+    crossings by returning a longitude interval with ``xmin > xmax``.
     """
-    out = {}
-    vec = vectorobject
+    out: GeometryInfo = {}
+    vec = vectorobject.clone()
     
     # For STAC metadata
     if vec.getProjection(type='epsg') != 4326:
@@ -40,11 +77,18 @@ def geometry_from_vec(
     out['bbox'] = [ext['xmin'], ext['ymin'], ext['xmax'], ext['ymax']]
     
     # For XML metadata
-    c_x = (ext['xmax'] + ext['xmin']) / 2
-    c_y = (ext['ymax'] + ext['ymin']) / 2
-    out['center'] = '{} {}'.format(c_y, c_x)
+    if ext['xmax'] < ext['xmin']:
+        center_x = ext['xmin'] + ((ext['xmax'] + 360) - ext['xmin']) / 2
+        if center_x > 180:
+            center_x -= 360
+    else:
+        center_x = (ext['xmin'] + ext['xmax']) / 2
+    center_y = (ext['ymax'] + ext['ymin']) / 2
+    out['center'] = '{} {}'.format(center_y, center_x)
+    
     wkt = geom.ExportToWkt().removeprefix('POLYGON ((').removesuffix('))')
-    wkt_list = ['{} {}'.format(x[1], x[0]) for x in [y.split(' ') for y in wkt.split(',')]]
+    wkt_list = ['{} {}'.format(x[1], x[0])
+                for x in [y.split(' ') for y in wkt.split(',')]]
     out['envelope'] = ' '.join(wkt_list)
     
     return out
