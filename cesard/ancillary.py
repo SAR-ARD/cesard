@@ -190,9 +190,11 @@ def combine_polygons(
         multipolygon: bool = False,
 ) -> Vector:
     """
-    Combine polygon vector objects into one.
-    The output is a single vector object with the polygons either stored in
-    separate features or combined into a single multipolygon geometry.
+    Combine (multi)polygon vector objects into one.
+    The output is a single vector object with the (multi)polygons either stored
+    in separate features or combined into a single multipolygon geometry.
+    If the input contains polygons and multipolygons and both ``explode=False``
+    and ``multipolygon=False``, all polygons are promoted to multipolygons.
 
     Parameters
     ----------
@@ -203,14 +205,36 @@ def combine_polygons(
     explode
         explode multipolygons into separate polygon features?
         Ignored if `multipolygon=True`.
+        Default False: preserve the multipolygons and promote
+        simple polygons to multipolygons if both types are present.
     multipolygon
-        Combine all polygons into one multipolygon?
-        Default False: write each polygon into a separate feature.
+        Combine all features into a single multipolygon?
+        Default False: write each feature separately.
 
     Returns
     -------
         The combined vector object.
     """
+    
+    def _promote_polygons_to_multipolygons(
+            gdf: gpd.GeoDataFrame,
+    ) -> gpd.GeoDataFrame:
+        """Promote Polygon geometries when a GeoDataFrame is mixed."""
+        geometry_types = set(gdf.geometry.geom_type.dropna())
+        
+        if geometry_types != {"Polygon", "MultiPolygon"}:
+            return gdf
+        
+        out = gdf.copy()
+        out["geometry"] = out.geometry.map(
+            lambda geom: (
+                MultiPolygon([geom])
+                if isinstance(geom, Polygon)
+                else geom
+            ),
+        )
+        return out
+    
     if not isinstance(vector, list):
         vector_reproject = [vector.reproject(projection=crs, inplace=False)]
     else:
@@ -234,6 +258,8 @@ def combine_polygons(
                 index_parts=False,
                 ignore_index=True
             )
+        else:
+            combined = _promote_polygons_to_multipolygons(combined)
         return from_geopandas(combined)
     
     parts = []
