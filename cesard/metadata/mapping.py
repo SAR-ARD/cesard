@@ -92,7 +92,7 @@ ASSET_MAP = {
 }
 
 URL = {
-    'ancillaryData_KML': 'https://sentiwiki.copernicus.eu/__attachments/1692737/'
+    'ancillaryData_KML': 'https://sentiwiki.copernicus.eu/__attachments/a_69a662aa1cb30487acc66009f09b1dcfa9e4e32f92af1c3b2dd1fc8a3c011738/'
                          'S2A_OPER_GIP_TILPAR_MPC__20151209T095117_V20150622T000000_21000101T000000_B00.zip',
     'card4l_nrb': 'https://ceos.org/ard/files/PFS/NRB/v5.5/CARD4L-PFS_NRB_v5.5.pdf',
     'card4l_orb': 'https://ceos.org/ard/files/PFS/ORB/v1.0/'
