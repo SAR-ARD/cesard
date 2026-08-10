@@ -99,7 +99,7 @@ def mosaic(
         username, password = authenticate(dem_type=dem_type,
                                           username=username,
                                           password=password)
-        geometry = geometry.wrap_dateline(inplace=False)
+        geometry = geometry.wrap_antimeridian(inplace=False)
         epsg = geometry.getProjection('epsg')
         ext = geometry.extent
         if ext['xmin'] > ext['xmax']:
