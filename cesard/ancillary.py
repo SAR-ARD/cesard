@@ -36,65 +36,6 @@ CRS = int | str | osr.SpatialReference
 EXT = dict[str, int | float]
 
 
-def _split_polygon_antimeridian(poly: Polygon) -> Polygon | MultiPolygon:
-    """Split a WGS84 polygon at the antimeridian. Helper function for _fix_antimeridian."""
-    
-    def shift_to_360(x, y, z=None):
-        x = x + 360 if x < 0 else x
-        return (x, y) if z is None else (x, y, z)
-    
-    def shift_to_180(x, y, z=None):
-        x = x - 360 if x > 180 else x
-        return (x, y) if z is None else (x, y, z)
-    
-    shifted = transform(shift_to_360, poly)
-    
-    # No crossing if the shifted polygon remains on one side of 180°.
-    minx, _, maxx, _ = shifted.bounds
-    if maxx <= 180 or minx >= 180:
-        return transform(shift_to_180, shifted)
-    
-    pieces = split(
-        shifted,
-        LineString([(180, -90), (180, 90)]),
-    )
-    
-    fixed = [
-        transform(shift_to_180, part)
-        for part in pieces.geoms
-        if not part.is_empty
-    ]
-    
-    if len(fixed) == 1:
-        return fixed[0]
-    
-    return MultiPolygon(fixed)
-
-
-def _fix_antimeridian(
-        geom: Polygon | MultiPolygon
-) -> Polygon | MultiPolygon:
-    """Helper function for combine_polygons to handle antimeridian-crossing geometries."""
-    if geom.is_empty:
-        return geom
-    
-    if not isinstance(geom, (Polygon, MultiPolygon)):
-        raise TypeError(f"Unsupported geometry type: {type(geom).__name__}")
-    
-    if isinstance(geom, Polygon):
-        return _split_polygon_antimeridian(geom)
-    
-    parts: list[Polygon] = []
-    for polygon in geom.geoms:
-        fixed = _split_polygon_antimeridian(polygon)
-        if isinstance(fixed, Polygon):
-            parts.append(fixed)
-        else:
-            parts.extend(fixed.geoms)
-    
-    return MultiPolygon(parts)
-
-
 def buffer_min_overlap(
         extent: EXT,
         geometry: Vector,
@@ -271,20 +212,21 @@ def combine_polygons(
         The combined vector object.
     """
     if not isinstance(vector, list):
-        gdfs = [vector.to_geopandas()]
+        vector_reproject = [vector.reproject(projection=crs, inplace=False)]
     else:
-        gdfs = [vector.to_geopandas() for vector in vector]
+        vector_reproject = [vec.reproject(projection=crs, inplace=False)
+                            for vec in vector]
+    
+    gdfs = [vec.to_geopandas() for vec in vector_reproject]
+    vector_reproject = None
     
     combined = gpd.GeoDataFrame(
         data=pd.concat(
-            objs=[gdf.to_crs(crs) for gdf in gdfs],
+            objs=gdfs,
             ignore_index=True
         ),
         crs=crs
     )
-    
-    combined["geometry"] = combined.geometry.map(_fix_antimeridian)
-    combined = combined.to_crs(crs)
     
     if not multipolygon:
         if explode:

@@ -105,6 +105,7 @@ def test_combine_polygons_antimeridian(
         ) as combined:
             assert combined.nfeatures == expected_features
             assert combined.geomType == expected_geom_type
+            assert combined.getArea() == pytest.approx(2.0)
 
 
 def test_combine_polygons_mixed_antimeridian():
@@ -131,3 +132,4 @@ def test_combine_polygons_mixed_antimeridian():
             ) as combined:
                 assert combined.nfeatures == 3
                 assert combined.geomType == ogr.wkbPolygon
+                assert combined.getArea() == pytest.approx(3.0)
