@@ -27,6 +27,7 @@ from pyroSAR.ancillary import Lock, LockCollection
 from pyroSAR import identify_many
 from collections import defaultdict
 from typing import Callable, List, TypeVar
+from metadata.mapping import URL
 
 log = logging.getLogger('cesard')
 
@@ -516,8 +517,7 @@ def get_kml() -> str:
     -------
         the path to the KML file
     """
-    remote = ('https://sentiwiki.copernicus.eu/__attachments/1692737/'
-              'S2A_OPER_GIP_TILPAR_MPC__20151209T095117_V20150622T000000_21000101T000000_B00.zip')
+    remote = URL['ancillaryData_KML']
     local_path = os.path.join(os.path.expanduser('~'), '.cesard')
     os.makedirs(local_path, exist_ok=True)
     local = os.path.join(local_path, os.path.basename(remote).replace('.zip', '.kml'))
