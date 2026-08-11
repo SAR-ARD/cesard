@@ -494,7 +494,7 @@ def generate_unique_id(
 
 def get_kml() -> str:
     """
-    Download the Sentinel-2 MGRS grid KML file. The target folder is ~/cesard.
+    Download the Sentinel-2 MGRS grid KML file. The target folder is ~/.cesard.
 
     Returns
     -------
@@ -509,8 +509,11 @@ def get_kml() -> str:
             return local
     
     with Lock(local):
+        if os.path.isfile(local):
+            return local
         log.info(f'downloading MGRS grid KML file to {local_path}')
         r = requests.get(remote)
+        r.raise_for_status()
         with zipfile.ZipFile(io.BytesIO(r.content)) as zf:
             zf.extractall(local_path)
     return local
