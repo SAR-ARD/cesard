@@ -1,6 +1,15 @@
 Changelog
 =========
 
+1.2.6 | 2026-08-11
+------------------
+
+* documentation bugfix: could not import spatialist when osgeo is mocked (`#38 <https://github.com/SAR-ARD/cesard/pull/38>`_)
+* Fixes kml download URL (`#40 <https://github.com/SAR-ARD/cesard/pull/40>`_)
+* [ancillary.get_kml] raise HTTP errors, check file existence again after hard-locking (`#41 <https://github.com/SAR-ARD/cesard/pull/41>`_)
+
+`Full v1.2.6 Changelog <https://github.com/SAR-ARD/cesard/compare/v1.2.5...v1.2.6>`_
+
 1.2.5 | 2026-04-15
 ------------------
 
