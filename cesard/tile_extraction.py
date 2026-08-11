@@ -1,4 +1,5 @@
 import re
+from math import ceil
 import itertools
 from lxml import html
 from spatialist.vector import Vector, wkt2vector, bbox
@@ -293,11 +294,17 @@ def multipolygon2polygon(wkt: str) -> str:
 def wkt2vector_regrid(
         wkt: str,
         epsg_in: int,
-        epsg_out: int | None = None
+        epsg_out: int | None = None,
+        grid_align: int = 10
 ) -> Vector:
     """
-    Convert a WKT geometry to a :class:`spatialist.vector.Vector` object and
-    optionally reproject and regrid it.
+    Convert a WKT geometry to a :class:`spatialist.vector.Vector` object.
+    
+    Optionally, the geometry is reprojected, its bounding box extracted,
+    and regridded to a multiple of `grid_align`. This is used to reproject
+    MGRS tile geometries into a different UTM zone while keeping coordinates
+    aligned to the target pixel grid and maintaining coverage of the original
+    geometry.
 
     Parameters
     ----------
@@ -307,6 +314,9 @@ def wkt2vector_regrid(
         the EPSG code for the CRS of `wkt`
     epsg_out:
         and optional target CRS to reproject the geometry
+    grid_align:
+        the grid alignment to use for regridding the bounding box
+        in units of `epsg_out`. Set to 0 for no alignment.
 
     Returns
     -------
@@ -322,6 +332,7 @@ def wkt2vector_regrid(
         with wkt2vector(wkt, epsg_in) as tmp:
             tmp.reproject(epsg_out)
             ext = tmp.extent
-            for k, v in ext.items():
-                ext[k] = round(v / 10) * 10
+            if grid_align != 0:
+                for k, v in ext.items():
+                    ext[k] = ceil(v / grid_align) * grid_align
         return bbox(ext, crs=epsg_out)
