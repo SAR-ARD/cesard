@@ -19,6 +19,8 @@ import logging
 
 log = logging.getLogger('cesard')
 
+EXT = dict[str, int | float]
+
 
 def create_vrt(
         src: str | list[str],
@@ -26,7 +28,7 @@ def create_vrt(
         fun: str,
         relpaths: bool = False,
         scale: int | None = None,
-        offset: float | None = None,
+        offset: int | float | None = None,
         dtype: str | None = None,
         args: dict[str, int | float | str] | None = None,
         options: dict | None = None,
@@ -127,7 +129,7 @@ def create_vrt(
             sc.text = str(scale)
         if offset is not None:
             off = etree.SubElement(band, 'Offset')
-            off.text = str(offset)
+            off.text = str(float(offset))
     
     if any([overviews, overview_resampling]) is not None:
         ovr = tree.find('OverviewList')
@@ -249,7 +251,7 @@ def create_rgb_vrt(
 
 def calc_product_start_stop(
         src_ids: list[ID],
-        extent: dict[str, int | float],
+        extent: EXT,
         epsg: int
 ) -> tuple[datetime, datetime]:
     """
@@ -281,6 +283,24 @@ def calc_product_start_stop(
     pyroSAR.drivers.SAFE.geo_grid
     scipy.interpolate.RBFInterpolator
     """
+    
+    def _unwrap_longitudes(
+            longitudes: np.ndarray,
+            reference: float
+    ) -> np.ndarray:
+        """
+        Return longitudes shifted by multiples of 360 near ``reference``.
+        
+        Examples
+        --------
+        >>> _unwrap_longitudes(np.array([179., 180., -179.]), 180.)
+        array([179., 180., 181.])
+        
+        >>> _unwrap_longitudes(np.array([359.0]), reference=2.0)
+        array([-1.])
+        """
+        return longitudes + 360.0 * np.round((reference - longitudes) / 360.0)
+    
     with bbox(extent, epsg) as tile_geom:
         tile_geom.reproject(4326)
         scene_geoms = [x.geometry() for x in src_ids]
@@ -288,7 +308,8 @@ def calc_product_start_stop(
             intersection = gpd.overlay(df1=tile_geom.to_geopandas(),
                                        df2=scene_geom.to_geopandas(),
                                        how='intersection')
-            tile_geom_pts = intersection.get_coordinates().to_numpy()
+            tile_geom_pts = intersection.get_coordinates().to_numpy(
+                dtype=float, copy=True)
         scene_geoms = None
     
     # combine geo grid of all scenes into one
@@ -305,11 +326,23 @@ def calc_product_start_stop(
     
     # get grid point coordinates and numerical time stamps for interpolation
     gdf['timestamp'] = gdf['azimuthTime'].astype(np.int64) / 10 ** 9
-    gridpts = gdf.get_coordinates().to_numpy()
+    grid_pts = gdf.get_coordinates().to_numpy(dtype=float, copy=True)
     az_time = gdf['timestamp'].values
     
+    # get the extent's center longitude coordinate for unwrapping
+    xmin = float(extent["xmin"])
+    xmax = float(extent["xmax"])
+    lon_reference = (
+        (xmin + xmax + 360.0) / 2.0
+        if xmin > xmax
+        else (xmin + xmax) / 2.0
+    )
+    # unwrap coordinates to a continuous longitude range for interpolation
+    grid_pts[:, 0] = _unwrap_longitudes(grid_pts[:, 0], lon_reference)
+    tile_geom_pts[:, 0] = _unwrap_longitudes(tile_geom_pts[:, 0], lon_reference)
+    
     # perform interpolation
-    rbf = RBFInterpolator(y=gridpts, d=az_time)
+    rbf = RBFInterpolator(y=grid_pts, d=az_time)
     interpolated = rbf(tile_geom_pts)
     
     # check interpolation validity
@@ -336,7 +369,7 @@ def calc_product_start_stop(
 def create_data_mask(
         outname: str,
         datasets: list[dict],
-        extent: dict[str, int | float],
+        extent: EXT,
         epsg: int,
         driver: str,
         creation_opt: list[str],
@@ -515,7 +548,7 @@ def create_acq_id_image(
         ref_tif: str,
         datasets: list[dict],
         src_ids: list[ID],
-        extent: dict[str, int | float],
+        extent: EXT,
         epsg: int,
         driver: str,
         creation_opt: list[str],
