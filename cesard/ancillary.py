@@ -13,8 +13,7 @@ from lxml import etree
 from datetime import datetime, timedelta, timezone
 from osgeo import osr
 from pyproj import Geod
-from shapely.geometry import MultiPolygon, Polygon, LineString
-from shapely.ops import split, transform
+from shapely.geometry import MultiPolygon, Polygon
 import geopandas as gpd
 import pandas as pd
 import numpy as np
@@ -27,7 +26,7 @@ from pyroSAR.ancillary import Lock, LockCollection
 from pyroSAR import identify_many
 from collections import defaultdict
 from typing import Callable, List, TypeVar
-from metadata.mapping import URL
+from .metadata.mapping import URL
 
 log = logging.getLogger('cesard')
 
