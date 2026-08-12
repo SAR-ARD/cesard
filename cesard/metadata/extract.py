@@ -113,7 +113,11 @@ def geometry_from_vec(
     # reproject (if necessary) and split along the antimeridian
     vec = vec.reproject(projection=4326)
     
-    feat = vec.getfeatures()[0]
+    features = vec.getfeatures()
+    if len(features) != 1:
+        raise ValueError("'vectorobject' must contain exactly one feature'")
+    feat = features[0]
+    
     geom = feat.GetGeometryRef()
     out['geometry'] = json.loads(geom.ExportToJson())
     ext = vec.extent
