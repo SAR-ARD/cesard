@@ -109,7 +109,10 @@ def geometry_from_vec(
     if vec.getProjection(type='epsg') != 4326:
         ext = vec.extent
         out['bbox_native'] = [ext['xmin'], ext['ymin'], ext['xmax'], ext['ymax']]
-        vec.reproject(4326)
+    
+    # reproject (if necessary) and split along the antimeridian
+    vec = vec.reproject(projection=4326)
+    
     feat = vec.getfeatures()[0]
     geom = feat.GetGeometryRef()
     out['geometry'] = json.loads(geom.ExportToJson())
