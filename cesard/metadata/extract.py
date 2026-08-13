@@ -111,7 +111,7 @@ def geometry_from_vec(
         out['bbox_native'] = [ext['xmin'], ext['ymin'], ext['xmax'], ext['ymax']]
     
     # reproject (if necessary) and split along the antimeridian
-    vec = vec.reproject(projection=4326)
+    vec.reproject(projection=4326)
     
     features = vec.getfeatures()
     if len(features) != 1:
