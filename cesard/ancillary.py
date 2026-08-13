@@ -185,7 +185,7 @@ def check_spacing(
 
 def combine_polygons(
         vector: Vector | list[Vector],
-        crs: int | str = 4326,
+        crs: CRS | None = None,
         explode: bool = False,
         multipolygon: bool = False,
 ) -> Vector:
@@ -201,7 +201,7 @@ def combine_polygons(
     vector
         The input vector object(s).
     crs
-        The target CRS.
+        The target CRS. Default None: do not reproject.
     explode
         explode multipolygons into separate polygon features?
         Ignored if `multipolygon=True`.
@@ -248,8 +248,7 @@ def combine_polygons(
         data=pd.concat(
             objs=gdfs,
             ignore_index=True
-        ),
-        crs=crs
+        )
     )
     
     if not multipolygon:
@@ -273,7 +272,7 @@ def combine_polygons(
     geom = MultiPolygon(parts)
     
     return from_geopandas(
-        gpd.GeoDataFrame(geometry=[geom], crs=crs)
+        gpd.GeoDataFrame(geometry=[geom], crs=combined.crs)
     )
 
 
