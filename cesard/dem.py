@@ -312,12 +312,13 @@ def retile(
     for epsg, group in itertools.groupby(tiles, lambda x: x.getProjection('epsg')):
         vectors = list(group)
         
-        # In case the DEM tiles are to be prepared as well, create a new list of tiles.
+        # In case the DEM tiles are to be prepared as well nad ``dem_strict=True``,
+        # create a new list of tiles.
         # This new list contains all tiles covering the AOI but all re-projected to the
         # current CRS. This way, a DEM mosaic can be created from prepared tiles in any
-        # UTM zone covering the AOI while fully covering it. This was needed for processing
-        # full SAR scenes to different UTM zones. In the current workflow this in no longer
-        # used.
+        # UTM zone covering the AOI while fully covering it.
+        # This was needed for processing full SAR scenes to different UTM zones.
+        # In the current workflow this is no longer used.
         if dem_dir is not None and not dem_strict:
             vectors = tile_ex.tile_from_aoi(
                 vector=vector.bbox(),
@@ -332,100 +333,58 @@ def retile(
                 box.reproject(4326)
                 ext_4326 = box.extent
         
-        if dem_dir is not None:
-            dem_names_base = ['{}_DEM.tif'.format(tile.mgrs) for tile in vectors]
-            dem_names = [os.path.join(dem_dir, x) for x in dem_names_base]
-            dem_target = [(tile, name) for tile, name in zip(vectors, dem_names)
-                          if not os.path.isfile(name)]
-            c_dem = True
-        else:
-            dem_target = dict()
-            c_dem = False
-        if wbm_dir is not None:
-            # exclude the reprojected tiles from the list of WBM tiles
-            tiles_wbm = [x for x in vectors if not re.search('_[0-9]*', x.mgrs)]
-            wbm_names_base = ['{}_WBM.tif'.format(tile.mgrs) for tile in tiles_wbm]
-            wbm_names = [os.path.join(wbm_dir, x) for x in wbm_names_base]
-            wbm_target = [(tile, name) for tile, name in zip(tiles_wbm, wbm_names)
-                          if not os.path.isfile(name)]
-            c_wbm = True
-        else:
-            wbm_target = dict()
-            c_wbm = False
-        
-        # stop if no files need to be created
-        if len(dem_target) == 0 and len(wbm_target) == 0:
-            continue
-        ###############################################
-        # DEM/WBM download and VRT mosaic creation
-        
-        # get download authentication if necessary
-        if c_wbm or c_dem:
+        for product, target in [
+            ('dem', dem_dir),
+            ('wbm', wbm_dir)
+        ]:
+            if target is None:
+                continue
+            
+            if product == 'wbm':
+                vectors = [x for x in vectors if not re.search('_[0-9]*', x.mgrs)]
+            out_names_base = [f'{tile.mgrs}_{product.upper()}.tif' for tile in vectors]
+            out_names = [os.path.join(target, x) for x in out_names_base]
+            out_target = [
+                (tile, name)
+                for tile, name in zip(vectors, out_names)
+                if not os.path.isfile(name)
+            ]
+            
+            if len(out_target) == 0:
+                continue
+            ###############################################
+            # download tiles
             username, password = authenticate(dem_type=dem_type,
                                               username=username,
                                               password=password)
-        
-        dem_tiles = []
-        wbm_tiles = []
-        
-        # download WBM tiles
-        if c_wbm:
+            
             with bbox(coordinates=ext_4326, crs=4326) as vec:
-                wbm_tiles = dem_autoload(
+                out_tiles = dem_autoload(
                     geometries=[vec], demType=dem_type,
-                    product='wbm',
+                    product=product,
                     username=username, password=password,
                     crop=False, lock_timeout=lock_timeout
                 )
-        # download DEM tiles
-        if c_dem:
-            with bbox(coordinates=ext_4326, crs=4326) as vec:
-                dem_tiles = dem_autoload(
-                    geometries=[vec], demType=dem_type,
-                    product='dem',
-                    username=username, password=password,
-                    crop=False, lock_timeout=lock_timeout
-                )
-        ###############################################
-        # create final DEM tiles
-        if len(dem_target) > 0:
-            tiles = [x[0].mgrs for x in dem_target]
-            log.info(f'creating DEM MGRS tiles: {tiles}')
-        for tile, filename in dem_target:
-            ext = tile.extent
-            bounds = [ext['xmin'], ext['ymin'],
-                      ext['xmax'], ext['ymax']]
-            with Lock(filename, timeout=lock_timeout):
-                if not os.path.isfile(filename):
-                    with bbox(coordinates=ext_4326, crs=4326) as vec:
-                        dem_create(
-                            geometries=[vec], demType=dem_type,
-                            product='dem', src=dem_tiles, dst=filename,
-                            t_srs=epsg, tr=(tr, tr), pbar=False,
-                            geoid_convert=geoid_convert, geoid=geoid,
-                            outputBounds=bounds, threads=threads,
-                            nodata=-32767, creationOptions=create_options
-                        )
-        ###############################################
-        # create final WBM tiles
-        if len(wbm_target) > 0:
-            tiles = [x[0].mgrs for x in wbm_target]
-            log.info(f'creating WBM MGRS tiles: {tiles}')
-        for tile, filename in wbm_target:
-            ext = tile.extent
-            bounds = [ext['xmin'], ext['ymin'],
-                      ext['xmax'], ext['ymax']]
-            with Lock(filename):
-                if not os.path.isfile(filename):
-                    with bbox(coordinates=ext_4326, crs=4326) as vec:
-                        dem_create(
-                            geometries=[vec], demType=dem_type,
-                            product='dem', src=wbm_tiles, dst=filename,
-                            t_srs=epsg, tr=(tr, tr),
-                            resampleAlg='mode', pbar=False,
-                            outputBounds=bounds, threads=threads,
-                            creationOptions=create_options
-                        )
+            ###############################################
+            # create MGRS tiles
+            tiles = [x[0].mgrs for x in out_target]
+            log.info(f'creating {product.upper()} MGRS tiles: {tiles}')
+            
+            for tile, filename in out_target:
+                ext = tile.extent
+                bounds = [ext['xmin'], ext['ymin'],
+                          ext['xmax'], ext['ymax']]
+                with Lock(filename, timeout=lock_timeout):
+                    if not os.path.isfile(filename):
+                        with bbox(coordinates=ext_4326, crs=4326) as vec:
+                            dem_create(
+                                geometries=[vec], demType=dem_type,
+                                product=product, src=out_tiles, dst=filename,
+                                t_srs=epsg, tr=(tr, tr), pbar=False,
+                                geoid_convert=geoid_convert, geoid=geoid,
+                                outputBounds=bounds, threads=threads,
+                                nodata=-32767, creationOptions=create_options
+                            )
 
 
 def to_mgrs(
