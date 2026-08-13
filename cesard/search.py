@@ -4,11 +4,11 @@ import re
 import inspect
 from dateutil.parser import parse as dateparse
 from datetime import datetime, timedelta
-from spatialist.vector import Vector, crsConvert, wkt2vector
+from spatialist.vector import Vector, crsConvert, wkt2vector, combine_polygons
 import asf_search as asf
 from pyroSAR.drivers import ID
 from pyroSAR.archive import SceneArchive
-from cesard.ancillary import date_to_utc, combine_polygons
+from cesard.ancillary import date_to_utc
 from cesard.tile_extraction import aoi_from_tile, tile_from_aoi
 from types import TracebackType
 from typing import Any

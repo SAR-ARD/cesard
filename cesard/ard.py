@@ -9,12 +9,11 @@ from time import gmtime, strftime
 from copy import deepcopy
 from scipy.interpolate import RBFInterpolator
 from osgeo import gdal
-from spatialist.vector import bbox
+from spatialist.vector import bbox, combine_polygons
 from spatialist.raster import Raster, Dtype
 from spatialist.auxil import gdalbuildvrt
 from pyroSAR.drivers import ID
 
-from cesard.ancillary import combine_polygons
 import logging
 
 log = logging.getLogger('cesard')

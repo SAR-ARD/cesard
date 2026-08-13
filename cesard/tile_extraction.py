@@ -2,10 +2,10 @@ import re
 from math import ceil
 import itertools
 from lxml import html
-from spatialist.vector import Vector, wkt2vector, bbox
+from spatialist.vector import Vector, wkt2vector, bbox, combine_polygons
 from spatialist.auxil import utm_autodetect
 from pyroSAR.drivers import ID
-from cesard.ancillary import buffer_min_overlap, get_kml, combine_polygons
+from cesard.ancillary import buffer_min_overlap, get_kml
 from osgeo import ogr
 
 

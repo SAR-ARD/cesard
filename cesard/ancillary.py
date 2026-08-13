@@ -13,14 +13,11 @@ from lxml import etree
 from datetime import datetime, timedelta, timezone
 from osgeo import osr
 from pyproj import Geod
-from shapely.geometry import MultiPolygon, Polygon
-import geopandas as gpd
-import pandas as pd
 import numpy as np
 import spatialist
 from spatialist.raster import Raster, rasterize
 from spatialist.vector import (bbox, intersect, largest_polygon_exterior,
-                               vectorize, Vector, from_geopandas)
+                               vectorize, Vector)
 import pyroSAR
 from pyroSAR.ancillary import Lock, LockCollection
 from pyroSAR import identify_many
@@ -181,99 +178,6 @@ def check_spacing(
         raise RuntimeError(f'target spacing of {spacing} m does not align '
                            f'with the S2-MGRS tile size and overlaps.\n'
                            f'Options: {options}')
-
-
-def combine_polygons(
-        vector: Vector | list[Vector],
-        crs: CRS | None = None,
-        explode: bool = False,
-        multipolygon: bool = False,
-) -> Vector:
-    """
-    Combine (multi)polygon vector objects into one.
-    The output is a single vector object with the (multi)polygons either stored
-    in separate features or combined into a single multipolygon geometry.
-    If the input contains polygons and multipolygons and both ``explode=False``
-    and ``multipolygon=False``, all polygons are promoted to multipolygons.
-
-    Parameters
-    ----------
-    vector
-        The input vector object(s).
-    crs
-        The target CRS. Default None: do not reproject.
-    explode
-        explode multipolygons into separate polygon features?
-        Ignored if `multipolygon=True`.
-        Default False: preserve the multipolygons and promote
-        simple polygons to multipolygons if both types are present.
-    multipolygon
-        Combine all features into a single multipolygon?
-        Default False: write each feature separately.
-
-    Returns
-    -------
-        The combined vector object.
-    """
-    
-    def _promote_polygons_to_multipolygons(
-            gdf: gpd.GeoDataFrame,
-    ) -> gpd.GeoDataFrame:
-        """Promote Polygon geometries when a GeoDataFrame is mixed."""
-        geometry_types = set(gdf.geometry.geom_type.dropna())
-        
-        if geometry_types != {"Polygon", "MultiPolygon"}:
-            return gdf
-        
-        out = gdf.copy()
-        out["geometry"] = out.geometry.map(
-            lambda geom: (
-                MultiPolygon([geom])
-                if isinstance(geom, Polygon)
-                else geom
-            ),
-        )
-        return out
-    
-    if not isinstance(vector, list):
-        vector_reproject = [vector.reproject(projection=crs, inplace=False)]
-    else:
-        vector_reproject = [vec.reproject(projection=crs, inplace=False)
-                            for vec in vector]
-    
-    gdfs = [vec.to_geopandas() for vec in vector_reproject]
-    vector_reproject = None
-    
-    combined = gpd.GeoDataFrame(
-        data=pd.concat(
-            objs=gdfs,
-            ignore_index=True
-        )
-    )
-    
-    if not multipolygon:
-        if explode:
-            combined = combined.explode(
-                index_parts=False,
-                ignore_index=True
-            )
-        else:
-            combined = _promote_polygons_to_multipolygons(combined)
-        return from_geopandas(combined)
-    
-    parts = []
-    
-    for geom in combined.geometry:
-        if isinstance(geom, Polygon):
-            parts.append(geom)
-        elif isinstance(geom, MultiPolygon):
-            parts.extend(geom.geoms)
-    
-    geom = MultiPolygon(parts)
-    
-    return from_geopandas(
-        gpd.GeoDataFrame(geometry=[geom], crs=combined.crs)
-    )
 
 
 def compute_hash(

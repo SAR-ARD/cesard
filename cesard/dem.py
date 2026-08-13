@@ -7,9 +7,9 @@ from pyroSAR.drivers import ID
 from pyroSAR.auxdata import dem_autoload, dem_create
 from pyroSAR.ancillary import Lock
 import cesard.tile_extraction as tile_ex
-from cesard.ancillary import (combine_polygons, get_tmp_name,
+from cesard.ancillary import (get_tmp_name,
                               pixel_size_degrees, vrt_add_overviews)
-from spatialist.vector import bbox, intersect, Vector
+from spatialist.vector import bbox, intersect, Vector, combine_polygons
 from typing import Literal
 import logging
 

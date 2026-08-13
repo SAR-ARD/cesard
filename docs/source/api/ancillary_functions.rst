@@ -13,7 +13,6 @@ Ancillary Functions
         buffer_time
         check_scene_consistency
         check_spacing
-        combine_polygons
         compute_hash
         datamask
         date_to_utc
