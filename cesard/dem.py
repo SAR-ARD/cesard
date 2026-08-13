@@ -7,7 +7,7 @@ from pyroSAR.drivers import ID
 from pyroSAR.auxdata import dem_autoload, dem_create
 from pyroSAR.ancillary import Lock
 import cesard.tile_extraction as tile_ex
-from cesard.ancillary import (get_max_ext, get_tmp_name,
+from cesard.ancillary import (combine_polygons, get_tmp_name,
                               pixel_size_degrees, vrt_add_overviews)
 from spatialist.vector import bbox, intersect, Vector
 from typing import Literal
@@ -327,10 +327,10 @@ def retile(
                 tilenames=tilenames)
         
         # Get the bounding box of the tile vector objects and use this from here on
-        ext = get_max_ext(geometries=vectors, buffer=200)
-        with bbox(coordinates=ext, crs=epsg) as box:
-            box.reproject(4326)
-            ext_4326 = box.extent
+        with combine_polygons(vectors) as combined:
+            with combined.bbox(buffer=200) as box:
+                box.reproject(4326)
+                ext_4326 = box.extent
         
         if dem_dir is not None:
             dem_names_base = ['{}_DEM.tif'.format(tile.mgrs) for tile in vectors]

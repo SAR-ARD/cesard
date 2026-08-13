@@ -5,7 +5,7 @@ from lxml import html
 from spatialist.vector import Vector, wkt2vector, bbox
 from spatialist.auxil import utm_autodetect
 from pyroSAR.drivers import ID
-from cesard.ancillary import get_max_ext, buffer_min_overlap, get_kml, combine_polygons
+from cesard.ancillary import buffer_min_overlap, get_kml, combine_polygons
 from osgeo import ogr
 
 
@@ -226,7 +226,9 @@ def aoi_from_scene(
             # get UTM EPSG code
             epsg = geometries[0].getProjection(type='epsg')
             # get maximum extent of tile group
-            ext_utm = get_max_ext(geometries=geometries)
+            with combine_polygons(geometries) as combined:
+                with combined.bbox() as box:
+                    ext_utm = box.extent
             del geometries
             # ensure a minimum overlap between AOI and pre-processed scene
             with scene.geometry() as geom:
@@ -251,7 +253,9 @@ def aoi_from_scene(
             # get all tiles, reprojected to the target UTM zone if necessary
             tiles = tile_from_aoi(vector=geom, epsg=epsg,
                                   return_geometries=True, strict=False)
-        ext_utm = get_max_ext(geometries=tiles)
+        with combine_polygons(tiles) as combined:
+            with combined.bbox() as box:
+                ext_utm = box.extent
         del tiles
         out.append({'extent': ext, 'epsg': epsg,
                     'extent_utm': ext_utm})

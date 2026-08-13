@@ -531,59 +531,6 @@ def get_kml() -> str:
     return local
 
 
-def get_max_ext(
-        geometries: list[Vector],
-        buffer: float | None = None,
-        crs: str | int | None = None
-) -> dict[str, float]:
-    """
-    Gets the maximum extent from a list of geometries.
-    
-    Parameters
-    ----------
-    geometries:
-        List of :class:`~spatialist.vector.Vector` geometries.
-    buffer:
-        The buffer in units of the geometries' CRS to add to the extent.
-    crs:
-        The target CRS of the extent. If None (default) the extent is
-        expressed in the CRS of the input geometries.
-    
-    Returns
-    -------
-        The maximum extent of the selected :class:`~spatialist.vector.Vector`
-        geometries including the chosen buffer.
-    """
-    max_ext = {}
-    crs_list = []
-    for geo in geometries:
-        crs_list.append(f"EPSG:{geo.getProjection('epsg')}")
-        if len(max_ext.keys()) == 0:
-            max_ext = geo.extent
-        else:
-            ext = geo.extent
-            for key in ['xmin', 'ymin']:
-                if ext[key] < max_ext[key]:
-                    max_ext[key] = ext[key]
-            for key in ['xmax', 'ymax']:
-                if ext[key] > max_ext[key]:
-                    max_ext[key] = ext[key]
-    crs_list = list(set(crs_list))
-    if len(crs_list) > 1:
-        raise RuntimeError(f'The input geometries are in different CRSs: {crs_list}')
-    max_ext = dict(max_ext)
-    if buffer is not None:
-        max_ext['xmin'] -= buffer
-        max_ext['xmax'] += buffer
-        max_ext['ymin'] -= buffer
-        max_ext['ymax'] += buffer
-    if crs is not None:
-        with bbox(coordinates=max_ext, crs=crs_list[0]) as geo:
-            geo.reproject(projection=crs)
-            max_ext = geo.extent
-    return max_ext
-
-
 def get_tmp_name(suffix: str) -> str:
     """
     Get the name of a temporary file with defined suffix.

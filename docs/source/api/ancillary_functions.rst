@@ -20,7 +20,6 @@ Ancillary Functions
         defaultdict_to_dict
         generate_unique_id
         get_kml
-        get_max_ext
         get_tmp_name
         group_by_attr
         group_by_time
