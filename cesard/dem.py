@@ -1,6 +1,5 @@
 import os
 import re
-import tempfile
 import itertools
 from getpass import getpass
 from pyroSAR.drivers import ID
@@ -107,11 +106,11 @@ def mosaic(
         geometry_4326 = geometry.clone()
         if epsg != 4326:
             geometry_4326.reproject(4326)
-        tiles = dem_autoload(geometries=[geometry_4326], demType=dem_type,
+        tiles = dem_autoload(geometry=geometry_4326, demType=dem_type,
                              buffer=0.01, product='dem',
                              username=username, password=password)
         bounds = [ext['xmin'], ext['ymin'], ext['xmax'], ext['ymax']]
-        dem_create(geometries=[geometry], demType=dem_type, product='dem',
+        dem_create(geometry=geometry, demType=dem_type, product='dem',
                    src=tiles, dst=outname, t_srs=epsg, tr=tr, threads=threads,
                    nodata=-32768, outputBounds=bounds)
         geometry_4326.close()
@@ -360,7 +359,7 @@ def retile(
             
             with bbox(coordinates=ext_4326, crs=4326) as vec:
                 out_tiles = dem_autoload(
-                    geometries=[vec], demType=dem_type,
+                    geometry=vec, demType=dem_type,
                     product=product,
                     username=username, password=password,
                     crop=False, lock_timeout=lock_timeout
@@ -378,7 +377,7 @@ def retile(
                     if not os.path.isfile(filename):
                         with bbox(coordinates=ext_4326, crs=4326) as vec:
                             dem_create(
-                                geometries=[vec], demType=dem_type,
+                                geometry=vec, demType=dem_type,
                                 product=product, src=out_tiles, dst=filename,
                                 t_srs=epsg, tr=(tr, tr), pbar=False,
                                 geoid_convert=geoid_convert, geoid=geoid,
@@ -440,9 +439,10 @@ def to_mgrs(
     vrt = get_tmp_name(suffix='.vrt')
     with bbox(coordinates=ext, crs=epsg) as vec:
         vec.reproject(4326)
-        dem_autoload(geometries=[vec], demType=dem_type, vrt=vrt)
+        dem_autoload(geometry=vec, demType=dem_type, vrt=vrt)
     vrt_add_overviews(vrt=vrt, overviews=overviews)
-    dem_create(src=vrt, dst=dst, t_srs=epsg, tr=tr,
+    dem_create(geometry=vec, demType=dem_type, product='dem',
+               src=vrt, dst=dst, t_srs=epsg, tr=tr,
                geoid_convert=geoid_convert, geoid=geoid, pbar=pbar,
                outputBounds=bounds, threads=threads, format=format,
                creationOptions=create_options)
