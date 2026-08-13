@@ -337,10 +337,10 @@ def retile(
             dem_names = [os.path.join(dem_dir, x) for x in dem_names_base]
             dem_target = [(tile, name) for tile, name in zip(vectors, dem_names)
                           if not os.path.isfile(name)]
-            fname_dem_tmp = tempfile.NamedTemporaryFile(suffix='.vrt', dir=dem_dir).name
+            c_dem = True
         else:
             dem_target = dict()
-            fname_dem_tmp = None
+            c_dem = False
         if wbm_dir is not None:
             # exclude the reprojected tiles from the list of WBM tiles
             tiles_wbm = [x for x in vectors if not re.search('_[0-9]*', x.mgrs)]
@@ -348,10 +348,10 @@ def retile(
             wbm_names = [os.path.join(wbm_dir, x) for x in wbm_names_base]
             wbm_target = [(tile, name) for tile, name in zip(tiles_wbm, wbm_names)
                           if not os.path.isfile(name)]
-            fname_wbm_tmp = tempfile.NamedTemporaryFile(suffix='.vrt', dir=wbm_dir).name
+            c_wbm = True
         else:
             wbm_target = dict()
-            fname_wbm_tmp = None
+            c_wbm = False
         
         # stop if no files need to be created
         if len(dem_target) == 0 and len(wbm_target) == 0:
@@ -359,32 +359,33 @@ def retile(
         ###############################################
         # DEM/WBM download and VRT mosaic creation
         
-        # get download authentication if either WBM or DEM VRTs will be created
-        c_wbm = fname_wbm_tmp is not None and not os.path.isfile(fname_wbm_tmp)
-        c_dem = fname_dem_tmp is not None and not os.path.isfile(fname_dem_tmp)
+        # get download authentication if necessary
         if c_wbm or c_dem:
             username, password = authenticate(dem_type=dem_type,
                                               username=username,
                                               password=password)
         
-        # download WBM tiles and combine them in a VRT mosaic
+        dem_tiles = []
+        wbm_tiles = []
+        
+        # download WBM tiles
         if c_wbm:
-            with Lock(fname_wbm_tmp, timeout=lock_timeout):
-                if not os.path.isfile(fname_wbm_tmp):
-                    with bbox(coordinates=ext_4326, crs=4326) as vec:
-                        dem_autoload(geometries=[vec], demType=dem_type,
-                                     vrt=fname_wbm_tmp, product='wbm',
-                                     username=username, password=password,
-                                     crop=False, lock_timeout=lock_timeout)
-        # download DEM tiles and combine them in a VRT mosaic
+            with bbox(coordinates=ext_4326, crs=4326) as vec:
+                wbm_tiles = dem_autoload(
+                    geometries=[vec], demType=dem_type,
+                    product='wbm',
+                    username=username, password=password,
+                    crop=False, lock_timeout=lock_timeout
+                )
+        # download DEM tiles
         if c_dem:
-            with Lock(fname_dem_tmp, timeout=lock_timeout):
-                if not os.path.isfile(fname_dem_tmp):
-                    with bbox(coordinates=ext_4326, crs=4326) as vec:
-                        dem_autoload(geometries=[vec], demType=dem_type,
-                                     vrt=fname_dem_tmp, product='dem',
-                                     username=username, password=password,
-                                     crop=False, lock_timeout=lock_timeout)
+            with bbox(coordinates=ext_4326, crs=4326) as vec:
+                dem_tiles = dem_autoload(
+                    geometries=[vec], demType=dem_type,
+                    product='dem',
+                    username=username, password=password,
+                    crop=False, lock_timeout=lock_timeout
+                )
         ###############################################
         # create final DEM tiles
         if len(dem_target) > 0:
@@ -396,13 +397,15 @@ def retile(
                       ext['xmax'], ext['ymax']]
             with Lock(filename, timeout=lock_timeout):
                 if not os.path.isfile(filename):
-                    dem_create(src=fname_dem_tmp, dst=filename,
-                               t_srs=epsg, tr=(tr, tr), pbar=False,
-                               geoid_convert=geoid_convert, geoid=geoid,
-                               outputBounds=bounds, threads=threads,
-                               nodata=-32767, creationOptions=create_options)
-        if fname_dem_tmp is not None:
-            os.remove(fname_dem_tmp)
+                    with bbox(coordinates=ext_4326, crs=4326) as vec:
+                        dem_create(
+                            geometries=[vec], demType=dem_type,
+                            product='dem', src=dem_tiles, dst=filename,
+                            t_srs=epsg, tr=(tr, tr), pbar=False,
+                            geoid_convert=geoid_convert, geoid=geoid,
+                            outputBounds=bounds, threads=threads,
+                            nodata=-32767, creationOptions=create_options
+                        )
         ###############################################
         # create final WBM tiles
         if len(wbm_target) > 0:
@@ -414,13 +417,15 @@ def retile(
                       ext['xmax'], ext['ymax']]
             with Lock(filename):
                 if not os.path.isfile(filename):
-                    dem_create(src=fname_wbm_tmp, dst=filename,
-                               t_srs=epsg, tr=(tr, tr),
-                               resampleAlg='mode', pbar=False,
-                               outputBounds=bounds, threads=threads,
-                               creationOptions=create_options)
-        if fname_wbm_tmp is not None:
-            os.remove(fname_wbm_tmp)
+                    with bbox(coordinates=ext_4326, crs=4326) as vec:
+                        dem_create(
+                            geometries=[vec], demType=dem_type,
+                            product='dem', src=wbm_tiles, dst=filename,
+                            t_srs=epsg, tr=(tr, tr),
+                            resampleAlg='mode', pbar=False,
+                            outputBounds=bounds, threads=threads,
+                            creationOptions=create_options
+                        )
 
 
 def to_mgrs(
