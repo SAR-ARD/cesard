@@ -536,14 +536,14 @@ def pixel_size_degrees(
         xres: float, yres: float
 ) -> tuple[float, float]:
     """
-    Convert a pixel size from meters to degrees.
+    Convert a pixel size from meters to degrees for a given point on Earth.
 
     Parameters
     ----------
     lon:
-        longitude in degrees
+        The longitude in degrees of the point on Earth.
     lat:
-        latitude in degrees
+        The latitude in degrees of the point on Earth.
     xres:
         x resolution in meters
     yres:
