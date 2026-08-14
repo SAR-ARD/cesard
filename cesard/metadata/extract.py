@@ -103,24 +103,25 @@ def geometry_from_vec(
     crossings by returning a longitude interval with ``xmin > xmax``.
     """
     out: GeometryInfo = {}
-    vec = vectorobject.clone()
+    with vectorobject.clone() as vec:
     
-    # For STAC metadata
-    if vec.getProjection(type='epsg') != 4326:
+        # For STAC metadata
+        if vec.getProjection(type='epsg') != 4326:
+            ext = vec.extent
+            out['bbox_native'] = [ext['xmin'], ext['ymin'], ext['xmax'], ext['ymax']]
+        
+        # reproject (if necessary) and split along the antimeridian
+        vec.reproject(projection=4326)
+        
+        features = vec.getfeatures()
+        if len(features) != 1:
+            raise ValueError("'vectorobject' must contain exactly one feature'")
+        feat = features[0]
+        
+        geom = feat.GetGeometryRef()
+        out['geometry'] = json.loads(geom.ExportToJson())
         ext = vec.extent
-        out['bbox_native'] = [ext['xmin'], ext['ymin'], ext['xmax'], ext['ymax']]
     
-    # reproject (if necessary) and split along the antimeridian
-    vec.reproject(projection=4326)
-    
-    features = vec.getfeatures()
-    if len(features) != 1:
-        raise ValueError("'vectorobject' must contain exactly one feature'")
-    feat = features[0]
-    
-    geom = feat.GetGeometryRef()
-    out['geometry'] = json.loads(geom.ExportToJson())
-    ext = vec.extent
     out['bbox'] = [ext['xmin'], ext['ymin'], ext['xmax'], ext['ymax']]
     
     # For XML metadata
