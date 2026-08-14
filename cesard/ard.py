@@ -302,6 +302,7 @@ def calc_product_start_stop(
     
     with bbox(extent, epsg) as tile_geom:
         tile_geom.reproject(4326)
+        extent_4326 = tile_geom.extent
         scene_geoms = [x.geometry() for x in src_ids]
         with combine_polygons(scene_geoms) as scene_geom:
             intersection = gpd.overlay(df1=tile_geom.to_geopandas(),
@@ -329,8 +330,8 @@ def calc_product_start_stop(
     az_time = gdf['timestamp'].values
     
     # get the extent's center longitude coordinate for unwrapping
-    xmin = float(extent["xmin"])
-    xmax = float(extent["xmax"])
+    xmin = float(extent_4326["xmin"])
+    xmax = float(extent_4326["xmax"])
     lon_reference = (
         (xmin + xmax + 360.0) / 2.0
         if xmin > xmax
