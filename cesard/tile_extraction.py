@@ -28,7 +28,7 @@ def tile_from_aoi(
         If None, all tile IDs are returned regardless of projection.
     strict:
         Strictly only return the names/geometries of the overlapping tiles in the target projection
-        or also allow reprojection of neighbouring tiles?
+        or also allow reprojection of neighboring tiles?
         In the latter case a tile name takes the form <tile ID>_<EPSG code>, e.g. `33TUN_32632`.
         Only applies if argument `epsg` is of type `int` or a list with one element.
     return_geometries:
@@ -50,6 +50,8 @@ def tile_from_aoi(
     with Vector(kml, driver='KML') as vec_kml:
         tiles = []
         with combine_polygons(vector, multipolygon=True) as vec_aoi:
+            if vec_aoi.getProjection(type='epsg') != 4326:
+                vec_aoi.reproject(projection=4326)
             feature = vec_aoi.getFeatureByIndex(0)
             geom = feature.GetGeometryRef()
             vec_kml.layer.SetSpatialFilter(geom)
