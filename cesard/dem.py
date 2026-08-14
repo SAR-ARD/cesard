@@ -6,9 +6,10 @@ from pyroSAR.drivers import ID
 from pyroSAR.auxdata import dem_autoload, dem_create
 from pyroSAR.ancillary import Lock
 import cesard.tile_extraction as tile_ex
-from cesard.ancillary import (get_tmp_name,
-                              pixel_size_degrees, vrt_add_overviews)
+from cesard.ancillary import pixel_size_degrees
+from spatialist.auxil import latlon_extent_center
 from spatialist.vector import bbox, intersect, Vector, combine_polygons
+from osgeo import gdal
 from typing import Literal
 import logging
 
@@ -110,8 +111,8 @@ def mosaic(
                              buffer=0.01, product='dem',
                              username=username, password=password)
         bounds = [ext['xmin'], ext['ymin'], ext['xmax'], ext['ymax']]
-        dem_create(geometry=geometry, demType=dem_type, product='dem',
-                   src=tiles, dst=outname, t_srs=epsg, tr=tr, threads=threads,
+        dem_create(geometry=geometry, src=tiles, dst=outname,
+                   t_srs=epsg, tr=tr, threads=threads,
                    nodata=-32768, outputBounds=bounds)
         geometry_4326.close()
 
@@ -166,9 +167,8 @@ def prepare(
                 if tr is not None:
                     with scene.geometry() as vec:
                         ext = vec.extent
-                    tr = pixel_size_degrees(lon=abs(ext['xmax'] - ext['xmin']) / 2,
-                                            lat=abs(ext['ymax'] - ext['ymin']) / 2,
-                                            xres=tr[0], yres=tr[1])
+                    lat, lon = latlon_extent_center(ext)
+                    tr = pixel_size_degrees(lon=lon, lat=lat, xres=tr[0], yres=tr[1])
                 with scene.bbox(buffer=0.002) as geom:
                     mosaic(geometry=geom, outname=fname_dem,
                            dem_type=dem_type, tr=tr,
@@ -377,8 +377,8 @@ def retile(
                     if not os.path.isfile(filename):
                         with bbox(coordinates=ext_4326, crs=4326) as vec:
                             dem_create(
-                                geometry=vec, demType=dem_type,
-                                product=product, src=out_tiles, dst=filename,
+                                geometry=vec,
+                                src=out_tiles, dst=filename,
                                 t_srs=epsg, tr=(tr, tr), pbar=False,
                                 geoid_convert=geoid_convert, geoid=geoid,
                                 outputBounds=bounds, threads=threads,
@@ -392,13 +392,12 @@ def to_mgrs(
         dem_type: str,
         overviews: list[int],
         tr: tuple[int | float, int | float],
-        format: str = 'COG',
         create_options: list[str] | None = None,
         threads: int | None = None,
         pbar: bool = False
 ) -> None:
     """
-    Create an MGRS-tiled DEM file.
+    Create an MGRS-tiled DEM COG file.
     
     Parameters
     ----------
@@ -412,8 +411,6 @@ def to_mgrs(
         The overview levels
     tr:
         the target resolution as (x, y)
-    format:
-        the output file format
     create_options:
         additional creation options to be passed to :func:`spatialist.auxil.gdalwarp`.
     threads:
@@ -422,28 +419,43 @@ def to_mgrs(
     pbar:
         add a progress bar?
     """
-    if dem_type == 'GETASSE30':
-        geoid_convert = False
+    if create_options is not None:
+        create_options = {k: v for k, v in [x.split('=') for x in create_options]}
     else:
-        geoid_convert = True
-    geoid = 'EGM2008'  # applies to all Copernicus DEM options
+        create_options = {}
+    
     with tile_ex.aoi_from_tile(tile=tile) as vec:
         ext = vec.extent
         epsg = vec.getProjection('epsg')
-    bounds = [ext['xmin'], ext['ymin'], ext['xmax'], ext['ymax']]
-    buffer = 200
-    ext['xmin'] -= buffer
-    ext['ymin'] -= buffer
-    ext['xmax'] += buffer
-    ext['ymax'] += buffer
-    vrt = get_tmp_name(suffix='.vrt')
-    with bbox(coordinates=ext, crs=epsg) as vec:
-        vec.reproject(4326)
-        dem_autoload(geometry=vec, demType=dem_type, vrt=vrt)
-    vrt_add_overviews(vrt=vrt, overviews=overviews)
-    dem_create(geometry=vec, demType=dem_type, product='dem',
-               src=vrt, dst=dst, t_srs=epsg, tr=tr,
-               geoid_convert=geoid_convert, geoid=geoid, pbar=pbar,
-               outputBounds=bounds, threads=threads, format=format,
-               creationOptions=create_options)
-    os.remove(vrt)
+        bounds = [ext['xmin'], ext['ymin'], ext['xmax'], ext['ymax']]
+        with vec.bbox(buffer=200) as box:
+            box.reproject(4326)
+            tiles = dem_autoload(geometry=box, demType=dem_type)
+            tmp = '/vsimem/dem.tif'
+            
+            # create a plain in-memory GeoTIFF
+            dem_create(geometry=box, src=tiles, dst=tmp,
+                       t_srs=epsg, tr=tr, pbar=pbar,
+                       outputBounds=bounds, threads=threads)
+            
+            # add the custom overview levels to it
+            ds = gdal.Open(tmp, gdal.GA_Update)
+            band = ds.GetRasterBand(1)
+            print('intermediate block size:', band.GetBlockSize())
+            band = None
+            resampling = create_options.get('OVERVIEW_RESAMPLING', 'AVERAGE')
+            ds.BuildOverviews(
+                resampling=resampling,
+                overviewlist=overviews,
+            )
+            
+            # convert it to a final COG file on disk
+            create_options['OVERVIEWS'] = 'FORCE_USE_EXISTING'
+            gdal.Translate(
+                destName=dst,
+                srcDS=ds,
+                format='COG',
+                creationOptions=create_options
+            )
+            ds = None
+            gdal.Unlink(tmp)
