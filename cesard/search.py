@@ -464,7 +464,7 @@ def scene_select(
             args['return_value'].append(key)
     
     log.debug("performing main scene search")
-    with combine_polygons(vec, multipolygon=True) as combined:
+    with combine_polygons(vector=vec, crs=4326, multipolygon=True) as combined:
         args['vectorobject'] = combined
         selection = archive.select(**args)
     del vec
