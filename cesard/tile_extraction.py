@@ -8,6 +8,12 @@ from pyroSAR.drivers import ID
 from cesard.ancillary import buffer_min_overlap, get_kml
 from osgeo import ogr
 
+ogr.UseExceptions()
+
+import logging
+
+log = logging.getLogger('cesard')
+
 
 def tile_from_aoi(
         vector: Vector | list[Vector],
@@ -223,10 +229,9 @@ def aoi_from_scene(
         def fn(x):
             return x.getProjection(type='epsg')
         
-        for zone, group in itertools.groupby(tiles, lambda x: fn(x)):
+        for epsg, group in itertools.groupby(tiles, lambda x: fn(x)):
             geometries = list(group)
-            # get UTM EPSG code
-            epsg = geometries[0].getProjection(type='epsg')
+            log.debug(f'got {len(geometries)} tiles in EPSG:{epsg}')
             # get maximum extent of tile group
             with combine_polygons(geometries) as combined:
                 with combined.bbox() as box:
