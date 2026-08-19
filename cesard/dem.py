@@ -111,7 +111,7 @@ def mosaic(
             bounds = [ext['xmin'], ext['ymin'], ext['xmax'], ext['ymax']]
             dem_create(geometry=geometry_4326, src=tiles, dst=outname,
                        t_srs=epsg, tr=tr, threads=threads,
-                       nodata=-32768, outputBounds=bounds)
+                       outputBounds=bounds)
 
 
 def prepare(
