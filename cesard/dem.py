@@ -406,6 +406,10 @@ def to_mgrs(
         the target resolution as (x, y)
     create_options:
         additional creation options to be passed to :func:`spatialist.auxil.gdalwarp`.
+        The following defaults are applied if not defined:
+        
+        - ``BLOCKSIZE=512``
+        - ``OVERVIEW_RESAMPLING=AVERAGE``
     threads:
         The number of threads to pass to :func:`pyroSAR.auxdata.dem_create`.
         Default `None`: use the value of `GDAL_NUM_THREADS` without modification.
@@ -426,29 +430,35 @@ def to_mgrs(
             tiles = dem_autoload(geometry=box, demType=dem_type)
             tmp = '/vsimem/dem.tif'
             
+            blocksize = create_options.get('BLOCKSIZE', '512')
+            create_options_tmp = {
+                'TILED': 'YES',
+                'BLOCKXSIZE': blocksize,
+                'BLOCKYSIZE': blocksize
+            }
+            
             # create a plain in-memory GeoTIFF
             dem_create(geometry=box, src=tiles, dst=tmp,
                        t_srs=epsg, tr=tr, pbar=pbar,
-                       outputBounds=bounds, threads=threads)
-            
-            # add the custom overview levels to it
-            ds = gdal.Open(tmp, gdal.GA_Update)
-            band = ds.GetRasterBand(1)
-            print('intermediate block size:', band.GetBlockSize())
-            band = None
-            resampling = create_options.get('OVERVIEW_RESAMPLING', 'AVERAGE')
-            ds.BuildOverviews(
-                resampling=resampling,
-                overviewlist=overviews,
-            )
-            
-            # convert it to a final COG file on disk
-            create_options['OVERVIEWS'] = 'FORCE_USE_EXISTING'
-            gdal.Translate(
-                destName=dst,
-                srcDS=ds,
-                format='COG',
-                creationOptions=create_options
-            )
-            ds = None
-            gdal.Unlink(tmp)
+                       outputBounds=bounds, threads=threads,
+                       creationOptions=create_options_tmp
+                       )
+    
+    # add the custom overview levels to it
+    ds = gdal.Open(tmp, gdal.GA_Update)
+    resampling = create_options.get('OVERVIEW_RESAMPLING', 'AVERAGE')
+    ds.BuildOverviews(
+        resampling=resampling,
+        overviewlist=overviews,
+    )
+    
+    # convert it to a final COG file on disk
+    create_options['OVERVIEWS'] = 'FORCE_USE_EXISTING'
+    gdal.Translate(
+        destName=dst,
+        srcDS=ds,
+        format='COG',
+        creationOptions=create_options
+    )
+    ds = None
+    gdal.Unlink(tmp)
