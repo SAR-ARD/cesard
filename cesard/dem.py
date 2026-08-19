@@ -375,7 +375,7 @@ def retile(
                                 src=out_tiles, dst=filename,
                                 t_srs=epsg, tr=(tr, tr), pbar=False,
                                 outputBounds=bounds, threads=threads,
-                                nodata=-32767, creationOptions=create_options
+                                creationOptions=create_options
                             )
 
 
