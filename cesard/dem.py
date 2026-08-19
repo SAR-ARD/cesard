@@ -279,12 +279,6 @@ def retile(
     --------
     cesard.tile_extraction.tile_from_aoi
     """
-    if dem_type == 'GETASSE30':
-        geoid_convert = False
-    else:
-        geoid_convert = True
-    geoid = 'EGM2008'  # applies to all Copernicus DEM options
-    
     tr = 10  # target resolution. Lower resolutions can be created virtually using VRTs.
     # additional creation options for gdalwarp
     create_options = ['COMPRESS=LERC_ZSTD', 'MAX_Z_ERROR=0']
@@ -380,7 +374,6 @@ def retile(
                                 geometry=vec,
                                 src=out_tiles, dst=filename,
                                 t_srs=epsg, tr=(tr, tr), pbar=False,
-                                geoid_convert=geoid_convert, geoid=geoid,
                                 outputBounds=bounds, threads=threads,
                                 nodata=-32767, creationOptions=create_options
                             )
