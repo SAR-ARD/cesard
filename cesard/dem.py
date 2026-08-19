@@ -104,17 +104,14 @@ def mosaic(
         ext = geometry.extent
         if ext['xmin'] > ext['xmax']:
             raise RuntimeError('geometry crosses the antimeridian')
-        geometry_4326 = geometry.clone()
-        if epsg != 4326:
-            geometry_4326.reproject(4326)
-        tiles = dem_autoload(geometry=geometry_4326, demType=dem_type,
-                             buffer=0.01, product='dem',
-                             username=username, password=password)
-        bounds = [ext['xmin'], ext['ymin'], ext['xmax'], ext['ymax']]
-        dem_create(geometry=geometry, src=tiles, dst=outname,
-                   t_srs=epsg, tr=tr, threads=threads,
-                   nodata=-32768, outputBounds=bounds)
-        geometry_4326.close()
+        with geometry.reproject(4326, inplace=False) as geometry_4326:
+            tiles = dem_autoload(geometry=geometry_4326, demType=dem_type,
+                                 buffer=0.01, product='dem',
+                                 username=username, password=password)
+            bounds = [ext['xmin'], ext['ymin'], ext['xmax'], ext['ymax']]
+            dem_create(geometry=geometry_4326, src=tiles, dst=outname,
+                       t_srs=epsg, tr=tr, threads=threads,
+                       nodata=-32768, outputBounds=bounds)
 
 
 def prepare(
