@@ -164,7 +164,7 @@ def prepare(
                 if tr is not None:
                     with scene.geometry() as vec:
                         ext = vec.extent
-                    lat, lon = latlon_extent_center(ext)
+                    lon, lat = latlon_extent_center(ext)
                     tr = pixel_size_degrees(lon=lon, lat=lat, xres=tr[0], yres=tr[1])
                 with scene.bbox(buffer=0.002) as geom:
                     mosaic(geometry=geom, outname=fname_dem,

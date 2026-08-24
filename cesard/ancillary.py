@@ -16,7 +16,7 @@ from pyproj import Geod
 import numpy as np
 import spatialist
 from spatialist.raster import Raster, rasterize
-from spatialist.vector import (bbox, intersect, largest_polygon_exterior,
+from spatialist.vector import (bbox, intersect, hull,
                                vectorize, Vector)
 import pyroSAR
 from pyroSAR.ancillary import Lock, LockCollection
@@ -281,14 +281,15 @@ def datamask(
             return None
         # vectorize the raster data mask
         with vectorize(target=arr, reference=ref) as vec:
-            # compute a valid data boundary geometry (vector data mask)
-            with largest_polygon_exterior(vec, expression="value=1") as bounds:
-                # rasterize the vector data mask
-                if not os.path.isfile(dm_ras):
-                    rasterize(vectorobject=bounds, reference=ref,
-                              outname=dm_ras)
-                # write the vector data mask
-                bounds.write(outfile=dm_vec)
+            with vec.filter(expression="value=1") as filt:
+                # compute a valid data boundary geometry (vector data mask)
+                with hull(vectorobject=filt, ratio=0) as bounds:
+                    # rasterize the vector data mask
+                    if not os.path.isfile(dm_ras):
+                        rasterize(vectorobject=bounds, reference=ref,
+                                  outname=dm_ras)
+                    # write the vector data mask
+                    bounds.write(outfile=dm_vec)
         return dm_vec
     
     if os.path.isfile(dm_vec) and os.path.isfile(dm_ras):
