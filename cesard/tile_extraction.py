@@ -219,6 +219,7 @@ def aoi_from_scene(
     -------
         a list of dictionaries with keys `extent`, `extent_utm`, `epsg`
     """
+    log.debug('determining MGRS tile overlap')
     out = []
     if multi:
         # extract all overlapping tiles

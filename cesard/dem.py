@@ -104,7 +104,7 @@ def mosaic(
         ext = geometry.extent
         if ext['xmin'] > ext['xmax']:
             raise RuntimeError('geometry crosses the antimeridian')
-        with geometry.reproject(4326, inplace=False) as geometry_4326:
+        with geometry.reproject(projection=4326, inplace=False) as geometry_4326:
             tiles = dem_autoload(geometry=geometry_4326, demType=dem_type,
                                  buffer=0.01, product='dem',
                                  username=username, password=password)
