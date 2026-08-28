@@ -105,11 +105,11 @@ def mosaic(
         if ext['xmin'] > ext['xmax']:
             raise RuntimeError('geometry crosses the antimeridian')
         with geometry.reproject(projection=4326, inplace=False) as geometry_4326:
-            tiles = dem_autoload(geometry=geometry_4326, demType=dem_type,
+            tiles = dem_autoload(vectorobject=geometry_4326, demType=dem_type,
                                  buffer=0.01, product='dem',
                                  username=username, password=password)
             bounds = [ext['xmin'], ext['ymin'], ext['xmax'], ext['ymax']]
-            dem_create(geometry=geometry_4326, src=tiles, dst=outname,
+            dem_create(vectorobject=geometry_4326, src=tiles, dst=outname,
                        t_srs=epsg, tr=tr, threads=threads,
                        outputBounds=bounds)
 
@@ -350,7 +350,7 @@ def retile(
             
             with bbox(coordinates=ext_4326, crs=4326) as vec:
                 out_tiles = dem_autoload(
-                    geometry=vec, demType=dem_type,
+                    vectorobject=vec, demType=dem_type,
                     product=product,
                     username=username, password=password,
                     crop=False, lock_timeout=lock_timeout
@@ -368,7 +368,7 @@ def retile(
                     if not os.path.isfile(filename):
                         with bbox(coordinates=ext_4326, crs=4326) as vec:
                             dem_create(
-                                geometry=vec,
+                                vectorobject=vec,
                                 src=out_tiles, dst=filename,
                                 t_srs=epsg, tr=(tr, tr), pbar=False,
                                 outputBounds=bounds, threads=threads,
@@ -424,7 +424,7 @@ def to_mgrs(
         bounds = [ext['xmin'], ext['ymin'], ext['xmax'], ext['ymax']]
         with vec.bbox(buffer=200) as box:
             box.reproject(4326)
-            tiles = dem_autoload(geometry=box, demType=dem_type)
+            tiles = dem_autoload(vectorobject=box, demType=dem_type)
             tmp = '/vsimem/dem.tif'
             
             blocksize = create_options.get('BLOCKSIZE', '512')
@@ -435,7 +435,7 @@ def to_mgrs(
             }
             
             # create a plain in-memory GeoTIFF
-            dem_create(geometry=box, src=tiles, dst=tmp,
+            dem_create(vectorobject=box, src=tiles, dst=tmp,
                        t_srs=epsg, tr=tr, pbar=pbar,
                        outputBounds=bounds, threads=threads,
                        creationOptions=create_options_tmp
