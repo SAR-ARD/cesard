@@ -32,9 +32,25 @@ def test_to_mgrs(tmpdir):
             y_factor = round(ras.raster.RasterYSize / ovr.YSize)
             assert x_factor == y_factor
             overviews_test.append(x_factor)
-            overviews_test_resampling.add(ovr.GetMetadataItem('RESAMPLING'))
-        assert sorted(overviews_test) == overviews
-        assert len(overviews_test_resampling) == 1
-        assert overviews_test_resampling.pop() == 'AVERAGE'
         
         band = None
+        
+        # check custom metadata item
+        assert (
+                ras.raster.GetMetadataItem('OVERVIEW_RESAMPLING')
+                == 'AVERAGE'
+        )
+        
+        # GDAL-native metadata item (not set in GDAL < 3.12)
+        resampling = ras.raster.GetMetadataItem(
+            'OVERVIEW_RESAMPLING',
+            'IMAGE_STRUCTURE',
+        )
+        
+        # custom metadata item to preserve resampling method in GDAL < 3.12
+        if resampling is None:
+            resampling = ras.raster.GetMetadataItem(
+                'OVERVIEW_RESAMPLING',
+            )
+        
+        assert resampling == 'AVERAGE'

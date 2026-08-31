@@ -449,13 +449,23 @@ def to_mgrs(
         overviewlist=overviews,
     )
     
+    # Compatibility metadata for GDAL < 3.12.
+    # Older COG drivers copy the existing overview pixels, but do not
+    # preserve their RESAMPLING metadata in the output COG.
+    # Hence, the metadata is set in a custom metadata item.
+    ds.SetMetadataItem(
+        'OVERVIEW_RESAMPLING',
+        resampling,
+    )
+    
     # convert it to a final COG file on disk
     create_options['OVERVIEWS'] = 'FORCE_USE_EXISTING'
-    gdal.Translate(
+    out = gdal.Translate(
         destName=dst,
         srcDS=ds,
         format='COG',
         creationOptions=create_options
     )
+    out = None
     ds = None
     gdal.Unlink(tmp)
