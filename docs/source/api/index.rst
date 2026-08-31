@@ -4,9 +4,9 @@ API Documentation
 .. toctree::
     :maxdepth: 1
 
-    configuration
+    config
     processing
     tile_extraction
-    ancillary_functions
+    ancillary
     search
     metadata
