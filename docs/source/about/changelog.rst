@@ -1,6 +1,14 @@
 Changelog
 =========
 
+1.3.0 | 2026-09-01
+------------------
+
+* [readthedocs] slimmed down and repaired build (`#44 <https://github.com/SAR-ARD/cesard/pull/44>`_)
+* added antimeridian handling capability (`#43 <https://github.com/SAR-ARD/cesard/pull/43>`_)
+
+`Full v1.3.0 Changelog <https://github.com/SAR-ARD/cesard/compare/v1.2.6...v1.3.0>`_
+
 1.2.6 | 2026-08-11
 ------------------
 
