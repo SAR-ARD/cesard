@@ -3,62 +3,75 @@ import os
 import datetime
 from importlib.metadata import version as get_version
 
+# -- Project information -----------------------------------------------------
+
 project = 'cesard'
 authors = 'the cesard developers'
 year = datetime.datetime.now().year
-
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.abspath('..'))
+copyright = ' (c) 2021-{}, {}'.format(year, authors)
 
 # The full version, including alpha/beta/rc tags.
 version_full = get_version(project)
 # The short X.Y version.
 version = '.'.join(version_full.split('.')[:2])
-# release is automatically added to the latex document title and header
+# release is automatically added to the LaTeX document title and header.
 release = version
 
-autodoc_mock_imports = ['pyproj', 'multiformats']
+# -- General Sphinx configuration -------------------------------------------
+
+# If extensions (or modules to document with autodoc) are in another directory,
+# add these directories to sys.path here.
+sys.path.insert(0, os.path.abspath('..'))
 
 # If your documentation needs a minimal Sphinx version, state it here.
 needs_sphinx = '1.6'
 
-# Add any Sphinx extension module names here, as strings. They can be
-# extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
-# ones.
 extensions = [
     'sphinx.ext.autodoc',
-    'sphinx.ext.coverage',
     'sphinx.ext.napoleon',
     'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
-    'sphinx.ext.viewcode',
     'sphinxcontrib.bibtex',
-    'nbsphinx',
-    'sphinx_toolbox.collapse',
-    "sphinx_autodoc_typehints"
+    'sphinx_autodoc_typehints',
 ]
 
-bibtex_bibfiles = ['references.bib']
+# Add any paths that contain templates here, relative to this directory.
+templates_path = ['_templates']
+
+# The suffix of source filenames.
+source_suffix = {'.rst': 'restructuredtext'}
+
+# The master toctree document.
+master_doc = 'index'
+
+# List of patterns, relative to source directory, that match files and
+# directories to ignore when looking for source files.
+exclude_patterns = ['_build']
+
+# The name of the Pygments (syntax highlighting) style to use.
+pygments_style = 'sphinx'
+
+# Warn about references where the target cannot be found.
+nitpicky = True
+
+# -- sphinx.ext.autodoc ------------------------------------------------------
+
+autodoc_mock_imports = [
+    'pyproj',
+    'multiformats',
+    'lxml',
+    'pyroSAR',
+    'asf_search',
+    'pystac',
+]
+
+# Let sphinx-autodoc-typehints do all type rendering.
+autodoc_typehints = 'none'
 
 # autodoc_default_flags = ['members']
-autosummary_generate = True
 
-intersphinx_mapping = {
-    'dateutil': ('https://dateutil.readthedocs.io/en/stable', None),
-    'multiformats': ('https://multiformats.readthedocs.io/en/stable', None),
-    'osgeo': ('https://gdal.org/en/stable', None),
-    'pyproj': ('https://pyproj4.github.io/pyproj/stable', None),
-    'pyroSAR': ('https://pyrosar.readthedocs.io/en/latest', None),
-    'pystac': ('https://pystac.readthedocs.io/en/stable', None),
-    'pystac-client': ('https://pystac-client.readthedocs.io/en/stable', None),
-    'python': ('https://docs.python.org/3', None),
-    's1ard': ('https://s1ard.readthedocs.io/en/latest', None),
-    'scipy': ('https://docs.scipy.org/doc/scipy', None),
-    'spatialist': ('https://spatialist.readthedocs.io/en/latest', None),
-    'stac-geoparquet': ('https://stac-utils.github.io/stac-geoparquet/latest', None)
-}
+
+# -- sphinx.ext.napoleon -----------------------------------------------------
 
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
@@ -70,59 +83,50 @@ napoleon_use_admonition_for_notes = False
 napoleon_use_admonition_for_references = False
 napoleon_use_ivar = False
 napoleon_use_param = True
-napoleon_use_rtype = True
+napoleon_use_rtype = False  # using python typing so conversion from docstring typing is not needed
 
-# Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+# -- sphinx.ext.autosummary --------------------------------------------------
 
-# The suffix of source filenames.
-source_suffix = {'.rst': 'restructuredtext'}
+autosummary_generate = True
 
-# The encoding of source files.
+# -- sphinx.ext.intersphinx --------------------------------------------------
+
+intersphinx_mapping = {
+    'multiformats': ('https://multiformats.readthedocs.io/en/stable', None),
+    'numpy': ('https://numpy.org/doc/stable', None),
+    'osgeo': ('https://gdal.org/en/stable', None),
+    'pyproj': ('https://pyproj4.github.io/pyproj/stable', None),
+    'pyroSAR': ('https://pyrosar.readthedocs.io/en/latest', None),
+    'python': ('https://docs.python.org/3', None),
+    's1ard': ('https://s1ard.readthedocs.io/en/latest', None),
+    'scipy': ('https://docs.scipy.org/doc/scipy', None),
+    'spatialist': ('https://spatialist.readthedocs.io/en/latest', None),
+}
+
+# -- sphinx_autodoc_typehints -----------------------------------------------
+
+# True (the extension default): render return types as a separate :rtype: block.
+# False: render the type inline with the return description.
+typehints_use_rtype = False
+typehints_use_signature = False
+typehints_use_signature_return = False
+typehints_fully_qualified = False
+
+# -- sphinxcontrib.bibtex ----------------------------------------------------
+
+bibtex_bibfiles = ['references.bib']
+
+# -- Other optional Sphinx settings -----------------------------------------
+
 # source_encoding = 'utf-8-sig'
-
-# The master toctree document.
-master_doc = 'index'
-
-# General information about the project.
-copyright = ' (c) 2021-{}, {}'.format(year, authors)
-
-# The language for content autogenerated by Sphinx. Refer to documentation
-# for a list of supported languages.
 # language = None
-
-# There are two options for replacing |today|: either, you set today to some
-# non-false value, then it is used:
 # today = ''
-# Else, today_fmt is used as the format for a strftime call.
 # today_fmt = '%B %d, %Y'
-
-# List of patterns, relative to source directory, that match files and
-# directories to ignore when looking for source files.
-exclude_patterns = ['_build']
-
-# The reST default role (used for this markup: `text`) to use for all
-# documents.
 # default_role = None
-
-# If true, '()' will be appended to :func: etc. cross-reference text.
 # add_function_parentheses = True
-
-# If true, the current module name will be prepended to all description
-# unit titles (such as .. function::).
 # add_module_names = True
-
-# If true, sectionauthor and moduleauthor directives will be shown in the
-# output. They are ignored by default.
 # show_authors = False
-
-# The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
-
-# A list of ignored prefixes for module index sorting.
 # modindex_common_prefix = []
-
-# If true, keep warnings as "system message" paragraphs in the built documents.
 # keep_warnings = False
 
 
