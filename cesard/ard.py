@@ -279,8 +279,8 @@ def calc_product_start_stop(
     
     See Also
     --------
-    pyroSAR.drivers.SAFE.geo_grid
-    scipy.interpolate.RBFInterpolator
+    :meth:`pyroSAR.drivers.SAFE.geo_grid`
+    :class:`scipy.interpolate.RBFInterpolator`
     """
     
     def _unwrap_longitudes(
