@@ -21,13 +21,11 @@ import pyroSAR
 from pyroSAR.ancillary import Lock, LockCollection
 from pyroSAR import identify_many
 from collections import defaultdict
-from typing import Callable, List, TypeVar
-from metadata.mapping import URL
+from typing import Callable, Any
+
+from .metadata.mapping import URL
 
 log = logging.getLogger('cesard')
-
-T = TypeVar('T')  # any type
-K = TypeVar('K')  # key
 
 
 def buffer_min_overlap(
@@ -107,8 +105,8 @@ def buffer_time(
         return datetime objects instead of strings?
     str_format:
         the output string format (ignored if `as_datetime` is True)
-    kwargs
-        time arguments passed to :func:`datetime.timedelta`
+    **kwargs:
+        time arguments passed to :class:`datetime.timedelta`
 
     Returns
     -------
@@ -594,9 +592,9 @@ def get_tmp_name(suffix: str) -> str:
 
 
 def group_by_attr(
-        items: List[T],
-        key_fn: Callable[[T], K]
-) -> List[List[T]]:
+        items: list[Any],
+        key_fn: Callable[[Any], str]
+) -> list[list[Any]]:
     """
     Group items based on a key function.
     

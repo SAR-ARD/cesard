@@ -19,7 +19,7 @@ def tile_from_aoi(
     Return a list of MGRS tile IDs or vector objects overlapping one or multiple areas of interest.
     
     Parameters
-    -------
+    ----------
     vector:
         The vector object(s) to read. CRS must be EPSG:4236.
     epsg:

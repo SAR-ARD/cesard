@@ -1,0 +1,10 @@
+name: cesard_docs
+channels:
+  - conda-forge
+dependencies:
+  - python>=3.10
+  - spatialist<0.20.0
+  - sphinx
+  - sphinx-autodoc-typehints
+  - sphinx_rtd_theme>=2.0
+  - sphinxcontrib-bibtex>=2.2
