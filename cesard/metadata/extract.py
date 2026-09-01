@@ -3,60 +3,66 @@ import json
 import numpy as np
 from datetime import datetime
 from spatialist import Raster
-from spatialist.auxil import crsConvert
 from spatialist.vector import Vector
 from osgeo import gdal, ogr
-from typing import Any
+from typing import Any, TypedDict, NotRequired
 
 gdal.UseExceptions()
 
 
-def vec_from_srccoords(
-        coord_list: list[list[tuple[float, float]]],
-        crs: int | str,
-        layername: str = 'polygon'
-) -> Vector:
+class GeometryInfo(TypedDict):
+    bbox: list[int | float]
+    bbox_native: NotRequired[list[int | float]]
+    center: str
+    envelope: list[str]
+    geometry: dict[str, Any]
+
+
+def _exterior_rings(geom: ogr.Geometry):
+    """Yield the exterior rings of Polygon and MultiPolygon geometries."""
+    geometry_type = geom.GetGeometryName()
+    
+    if geometry_type == 'POLYGON':
+        if geom.GetGeometryCount() > 0:
+            yield geom.GetGeometryRef(0)
+    
+    elif geometry_type == 'MULTIPOLYGON':
+        for i in range(geom.GetGeometryCount()):
+            polygon = geom.GetGeometryRef(i)
+            if polygon.GetGeometryCount() > 0:
+                yield polygon.GetGeometryRef(0)
+    
+    else:
+        raise TypeError(
+            f'expected Polygon or MultiPolygon geometry, got {geometry_type}'
+        )
+
+
+def _format_envelopes(geom: ogr.Geometry) -> list[str]:
     """
-    Creates a single :class:`~spatialist.vector.Vector` object from a list
-    of footprint coordinates of source scenes.
-    
-    Parameters
-    ----------
-    coord_list:
-        List containing for each source scene a list of coordinate pairs as
-        retrieved from the metadata stored in an :class:`~pyroSAR.drivers.ID`
-        object.
-    crs:
-        the coordinate reference system of the provided coordinates.
-    layername:
-        the layer name of the output vector object
-    
+    Format each exterior ring as a separate ``latitude longitude`` string.
+
     Returns
     -------
-        the vector object
+    list[str]
+        One coordinate string per polygon exterior ring. Coordinates are
+        formatted as ``latitude longitude`` pairs, as required by the XML
+        metadata writer.
     """
-    srs = crsConvert(crs, 'osr')
-    pts = ogr.Geometry(ogr.wkbMultiPoint)
-    for footprint in coord_list:
-        for lon, lat in footprint:
-            point = ogr.Geometry(ogr.wkbPoint)
-            point.AddPoint(lon, lat)
-            pts.AddGeometry(point)
-    geom = pts.ConvexHull()
-    vec = Vector(driver='Memory')
-    vec.addlayer(layername, srs, geom.GetGeometryType())
-    vec.addfeature(geom)
-    point = None
-    pts = None
-    geom = None
-    return vec
+    return [
+        ' '.join(
+            f'{latitude} {longitude}'
+            for longitude, latitude, *_ in ring.GetPoints()
+        )
+        for ring in _exterior_rings(geom)
+    ]
 
 
 def geometry_from_vec(
         vectorobject: Vector
-) -> dict[str, Any]:
+) -> GeometryInfo:
     """
-    Get geometry information for usage in STAC and XML metadata from a :class:`spatialist.vector.Vector` object.
+    Get geometry information for usage in STAC and XML metadata.
     
     Parameters
     ----------
@@ -65,29 +71,70 @@ def geometry_from_vec(
     
     Returns
     -------
-        A dictionary containing the geometry information extracted from the vector object.
-    """
-    out = {}
-    vec = vectorobject
+    GeometryInfo
+        A dictionary with the following keys:
+        
+        `bbox`:
+          The bounding box in EPSG:4326 coordinates,
+          in the order ``[xmin, ymin, xmax, ymax]``.
+        
+        `bbox_native`:
+          The bounding box in native coordinates
+          (only if input is not in EPSG:4326),
+          in the order ``[xmin, ymin, xmax, ymax]``.
+        
+        `center`:
+          The center point in EPSG:4326 coordinates
+          as a whitespace-separated string in the order ``"latitude longitude"``.
+        
+        `envelope`:
+          The exterior ring of the geometry as a whitespace-separated
+          sequence of EPSG:4326 coordinate pairs. Each coordinate
+          pair is formatted as ``"latitude longitude"`` and coordinate pairs
+          are separated by a single space.
+        
+        `geometry`:
+          The geometry in EPSG:4326 GeoJSON format.
     
-    # For STAC metadata
-    if vec.getProjection(type='epsg') != 4326:
+    Notes
+    -----
+    The extent and center calculation uses
+    :attr:`spatialist.vector.Vector.extent`, which preserves antimeridian
+    crossings by returning a longitude interval with ``xmin > xmax``.
+    """
+    out: GeometryInfo = {}
+    with vectorobject.clone() as vec:
+    
+        # For STAC metadata
+        if vec.getProjection(type='epsg') != 4326:
+            ext = vec.extent
+            out['bbox_native'] = [ext['xmin'], ext['ymin'], ext['xmax'], ext['ymax']]
+        
+        # reproject (if necessary) and split along the antimeridian
+        vec.reproject(projection=4326)
+        
+        features = vec.getfeatures()
+        if len(features) != 1:
+            raise ValueError("'vectorobject' must contain exactly one feature'")
+        feat = features[0]
+        
+        geom = feat.GetGeometryRef()
+        out['geometry'] = json.loads(geom.ExportToJson())
         ext = vec.extent
-        out['bbox_native'] = [ext['xmin'], ext['ymin'], ext['xmax'], ext['ymax']]
-        vec.reproject(4326)
-    feat = vec.getfeatures()[0]
-    geom = feat.GetGeometryRef()
-    out['geometry'] = json.loads(geom.ExportToJson())
-    ext = vec.extent
+    
     out['bbox'] = [ext['xmin'], ext['ymin'], ext['xmax'], ext['ymax']]
     
     # For XML metadata
-    c_x = (ext['xmax'] + ext['xmin']) / 2
-    c_y = (ext['ymax'] + ext['ymin']) / 2
-    out['center'] = '{} {}'.format(c_y, c_x)
-    wkt = geom.ExportToWkt().removeprefix('POLYGON ((').removesuffix('))')
-    wkt_list = ['{} {}'.format(x[1], x[0]) for x in [y.split(' ') for y in wkt.split(',')]]
-    out['envelope'] = ' '.join(wkt_list)
+    if ext['xmax'] < ext['xmin']:
+        center_x = ext['xmin'] + ((ext['xmax'] + 360) - ext['xmin']) / 2
+        if center_x > 180:
+            center_x -= 360
+    else:
+        center_x = (ext['xmin'] + ext['xmax']) / 2
+    center_y = (ext['ymax'] + ext['ymin']) / 2
+    out['center'] = '{} {}'.format(center_y, center_x)
+    
+    out['envelope'] = _format_envelopes(geom)
     
     return out
 

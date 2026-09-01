@@ -1,11 +1,18 @@
 import re
+from math import ceil
 import itertools
 from lxml import html
-from spatialist.vector import Vector, wkt2vector, bbox
+from spatialist.vector import Vector, wkt2vector, bbox, combine_polygons
 from spatialist.auxil import utm_autodetect
 from pyroSAR.drivers import ID
-from cesard.ancillary import get_max_ext, buffer_min_overlap, get_kml, combine_polygons
+from cesard.ancillary import buffer_min_overlap, get_kml
 from osgeo import ogr
+
+ogr.UseExceptions()
+
+import logging
+
+log = logging.getLogger('cesard')
 
 
 def tile_from_aoi(
@@ -27,7 +34,7 @@ def tile_from_aoi(
         If None, all tile IDs are returned regardless of projection.
     strict:
         Strictly only return the names/geometries of the overlapping tiles in the target projection
-        or also allow reprojection of neighbouring tiles?
+        or also allow reprojection of neighboring tiles?
         In the latter case a tile name takes the form <tile ID>_<EPSG code>, e.g. `33TUN_32632`.
         Only applies if argument `epsg` is of type `int` or a list with one element.
     return_geometries:
@@ -49,6 +56,8 @@ def tile_from_aoi(
     with Vector(kml, driver='KML') as vec_kml:
         tiles = []
         with combine_polygons(vector, multipolygon=True) as vec_aoi:
+            if vec_aoi.getProjection(type='epsg') != 4326:
+                vec_aoi.reproject(projection=4326)
             feature = vec_aoi.getFeatureByIndex(0)
             geom = feature.GetGeometryRef()
             vec_kml.layer.SetSpatialFilter(geom)
@@ -176,7 +185,7 @@ def aoi_from_scene(
         scene: ID,
         multi: bool = True,
         percent: int | float = 1
-) -> list[dict[str, dict[str, float] | int]]:
+) -> list[dict[str, dict[str, int | float] | int]]:
     """
     Get processing AOIs for a SAR scene. The MGRS grid requires a SAR
     scene to be geocoded to multiple UTM zones depending on the overlapping
@@ -188,7 +197,7 @@ def aoi_from_scene(
     - the EPSG code of the UTM zone (key `epsg`)
     
     A minimum overlap of the AOIs with the SAR scene is ensured by buffering
-    the AOIs if necessary. The minimum overlap can be controlled with
+    the AOIs if necessary. The minimum overlap can be controlled with the
     parameter `percent`.
     
     Parameters
@@ -196,18 +205,21 @@ def aoi_from_scene(
     scene:
         the SAR scene object
     multi:
-        split into multiple AOIs per overlapping UTM zone or just one AOI
-        covering the whole scene. In the latter case the best matching UTM
-        zone is auto-detected
-        (using function :func:`spatialist.auxil.utm_autodetect`).
+        split into multiple AOIs per overlapping UTM zone?
+        If `False`, just one AOI covering the whole scene is returned.
+        In this case the best matching UTM zone is auto-detected
+        (using function :func:`spatialist.auxil.utm_autodetect`)
+        and no buffering is performed.
     percent:
-        the minimum overlap in percent of each AOI with the SAR scene.
+        the minimum overlap in percentage of each AOI with the SAR scene.
+        Only applies if `multi=True`.
         See function :func:`cesard.ancillary.buffer_min_overlap`.
 
     Returns
     -------
         a list of dictionaries with keys `extent`, `extent_utm`, `epsg`
     """
+    log.debug('determining MGRS tile overlap')
     out = []
     if multi:
         # extract all overlapping tiles
@@ -218,27 +230,29 @@ def aoi_from_scene(
         def fn(x):
             return x.getProjection(type='epsg')
         
-        for zone, group in itertools.groupby(tiles, lambda x: fn(x)):
+        for epsg, group in itertools.groupby(tiles, lambda x: fn(x)):
             geometries = list(group)
-            # get UTM EPSG code
-            epsg = geometries[0].getProjection(type='epsg')
+            log.debug(f'got {len(geometries)} tiles in EPSG:{epsg}')
             # get maximum extent of tile group
-            ext_utm = get_max_ext(geometries=geometries)
+            with combine_polygons(geometries) as combined:
+                with combined.bbox() as box:
+                    ext_utm = box.extent
             del geometries
-            with bbox(ext_utm, epsg) as geom1:
-                # ensure a minimum overlap between AOI and pre-processed scene
-                with scene.geometry() as geom2:
-                    geom2.reproject(epsg)
-                    # 60 m to keep aligned to MGRS tile size and overlaps
-                    # see ancillary.check_spacing
-                    with buffer_min_overlap(geom1=geom1, geom2=geom2,
-                                            percent=percent, step=60) as buffered:
-                        ext_utm = buffered.extent
+            # ensure a minimum overlap between AOI and pre-processed scene
+            with scene.geometry() as geom:
+                geom.reproject(epsg)
+                # 60 m to keep aligned to MGRS tile size and overlaps
+                # see ancillary.check_spacing
+                ext_utm_buffered = buffer_min_overlap(
+                    extent=ext_utm, geometry=geom,
+                    percent=percent, step=60
+                )
                 # convert extent to EPSG:4326
-                geom1.reproject(projection=4326)
-                ext = geom1.extent
+                with bbox(coordinates=ext_utm_buffered, crs=epsg) as buffered:
+                    buffered.reproject(projection=4326)
+                    ext = buffered.extent
             out.append({'extent': ext, 'epsg': epsg,
-                        'extent_utm': ext_utm})
+                        'extent_utm': ext_utm_buffered})
     else:
         with scene.bbox() as geom:
             ext = geom.extent
@@ -247,7 +261,9 @@ def aoi_from_scene(
             # get all tiles, reprojected to the target UTM zone if necessary
             tiles = tile_from_aoi(vector=geom, epsg=epsg,
                                   return_geometries=True, strict=False)
-        ext_utm = get_max_ext(geometries=tiles)
+        with combine_polygons(tiles) as combined:
+            with combined.bbox() as box:
+                ext_utm = box.extent
         del tiles
         out.append({'extent': ext, 'epsg': epsg,
                     'extent_utm': ext_utm})
@@ -290,11 +306,17 @@ def multipolygon2polygon(wkt: str) -> str:
 def wkt2vector_regrid(
         wkt: str,
         epsg_in: int,
-        epsg_out: int | None = None
+        epsg_out: int | None = None,
+        grid_align: int = 10
 ) -> Vector:
     """
-    Convert a WKT geometry to a :class:`spatialist.vector.Vector` object and
-    optionally reproject and regrid it.
+    Convert a WKT geometry to a :class:`spatialist.vector.Vector` object.
+    
+    Optionally, the geometry is reprojected, its bounding box extracted,
+    and regridded to a multiple of `grid_align`. This is used to reproject
+    MGRS tile geometries into a different UTM zone while keeping coordinates
+    aligned to the target pixel grid and maintaining coverage of the original
+    geometry.
 
     Parameters
     ----------
@@ -304,6 +326,9 @@ def wkt2vector_regrid(
         the EPSG code for the CRS of `wkt`
     epsg_out:
         and optional target CRS to reproject the geometry
+    grid_align:
+        the grid alignment to use for regridding the bounding box
+        in units of `epsg_out`. Set to 0 for no alignment.
 
     Returns
     -------
@@ -319,6 +344,7 @@ def wkt2vector_regrid(
         with wkt2vector(wkt, epsg_in) as tmp:
             tmp.reproject(epsg_out)
             ext = tmp.extent
-            for k, v in ext.items():
-                ext[k] = round(v / 10) * 10
+            if grid_align != 0:
+                for k, v in ext.items():
+                    ext[k] = ceil(v / grid_align) * grid_align
         return bbox(ext, crs=epsg_out)

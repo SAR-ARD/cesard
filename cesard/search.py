@@ -4,11 +4,11 @@ import re
 import inspect
 from dateutil.parser import parse as dateparse
 from datetime import datetime, timedelta
-from spatialist.vector import Vector, crsConvert, wkt2vector
+from spatialist.vector import Vector, crsConvert, wkt2vector, combine_polygons
 import asf_search as asf
 from pyroSAR.drivers import ID
 from pyroSAR.archive import SceneArchive
-from cesard.ancillary import date_to_utc, combine_polygons
+from cesard.ancillary import date_to_utc
 from cesard.tile_extraction import aoi_from_tile, tile_from_aoi
 from types import TracebackType
 from typing import Any
@@ -187,6 +187,7 @@ def asf_select(
     return_value:
         the query return value(s). Options:
         
+        - ASF: the :class:`~cesard.search.ASF` object
         - acquisition_mode: the sensor's acquisition mode
         - frameNumber: the frame or datatake number
         - geometry_wkb: the scene's footprint geometry formatted as WKB
@@ -217,14 +218,42 @@ def asf_select(
         beam_mode = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6']
     else:
         beam_mode = acquisition_mode
+    
+    # geometry handling
+    # asf.search has an argument 'intersectsWith', but this is not used
+    # here because it does not support MultiPolygon geometries (needed
+    # for antimeridian handling).
+    # See https://github.com/asfadmin/Discovery-asf_search/issues/465.
     if vectorobject is not None:
         if vectorobject.nfeatures > 1:
             raise RuntimeError("'vectorobject' contains more than one feature.")
+        
         with vectorobject.clone() as geom:
             geom.reproject(4326)
-            geometry = geom.convert2wkt(set3D=False)[0]
+            geometry = geom.to_geopandas().geometry.iloc[0]
+            
+            if geometry.geom_type == 'Polygon':
+                polygons = [geometry]
+            elif geometry.geom_type == 'MultiPolygon':
+                polygons = list(geometry.geoms)
+            else:
+                raise RuntimeError(
+                    "'vectorobject' must contain a Polygon or MultiPolygon geometry."
+                )
+            
+            cmr_keywords = []
+            for polygon in polygons:
+                coordinates = ','.join(
+                    f'{coordinate:.16f}'
+                    for point in polygon.exterior.coords
+                    for coordinate in point[:2]
+                )
+                cmr_keywords.append(('polygon[]', coordinates))
+            
+            if len(polygons) > 1:
+                cmr_keywords.append(('options[polygon][or]', 'true'))
     else:
-        geometry = None
+        cmr_keywords = None
     
     start = date_to_utc(mindate, as_datetime=True)
     stop = date_to_utc(maxdate, as_datetime=True)
@@ -240,7 +269,8 @@ def asf_select(
                         beamMode=beam_mode,
                         start=start,
                         end=stop,
-                        intersectsWith=geometry).geojson()
+                        cmr_keywords=cmr_keywords).geojson()
+    
     features = result['features']
     
     def date_extract(item, key):
@@ -434,7 +464,7 @@ def scene_select(
             args['return_value'].append(key)
     
     log.debug("performing main scene search")
-    with combine_polygons(vec, multipolygon=True) as combined:
+    with combine_polygons(vector=vec, crs=4326, multipolygon=True) as combined:
         args['vectorobject'] = combined
         selection = archive.select(**args)
     del vec

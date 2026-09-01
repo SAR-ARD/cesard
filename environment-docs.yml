@@ -2,8 +2,8 @@ name: cesard_docs
 channels:
   - conda-forge
 dependencies:
-  - python>=3.10
-  - spatialist<0.20.0
+  - python>=3.11
+  - spatialist>=0.20.1
   - sphinx
   - sphinx-autodoc-typehints
   - sphinx_rtd_theme>=2.0

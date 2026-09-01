@@ -9,15 +9,16 @@ from time import gmtime, strftime
 from copy import deepcopy
 from scipy.interpolate import RBFInterpolator
 from osgeo import gdal
-from spatialist.vector import bbox
+from spatialist.vector import bbox, combine_polygons
 from spatialist.raster import Raster, Dtype
 from spatialist.auxil import gdalbuildvrt
 from pyroSAR.drivers import ID
 
-from cesard.ancillary import combine_polygons
 import logging
 
 log = logging.getLogger('cesard')
+
+EXT = dict[str, int | float]
 
 
 def create_vrt(
@@ -26,7 +27,7 @@ def create_vrt(
         fun: str,
         relpaths: bool = False,
         scale: int | None = None,
-        offset: float | None = None,
+        offset: int | float | None = None,
         dtype: str | None = None,
         args: dict[str, int | float | str] | None = None,
         options: dict | None = None,
@@ -127,7 +128,7 @@ def create_vrt(
             sc.text = str(scale)
         if offset is not None:
             off = etree.SubElement(band, 'Offset')
-            off.text = str(offset)
+            off.text = str(float(offset))
     
     if any([overviews, overview_resampling]) is not None:
         ovr = tree.find('OverviewList')
@@ -249,7 +250,7 @@ def create_rgb_vrt(
 
 def calc_product_start_stop(
         src_ids: list[ID],
-        extent: dict[str, int | float],
+        extent: EXT,
         epsg: int
 ) -> tuple[datetime, datetime]:
     """
@@ -281,14 +282,34 @@ def calc_product_start_stop(
     :meth:`pyroSAR.drivers.SAFE.geo_grid`
     :class:`scipy.interpolate.RBFInterpolator`
     """
+    
+    def _unwrap_longitudes(
+            longitudes: np.ndarray,
+            reference: float
+    ) -> np.ndarray:
+        """
+        Return longitudes shifted by multiples of 360 near ``reference``.
+        
+        Examples
+        --------
+        >>> _unwrap_longitudes(np.array([179., 180., -179.]), 180.)
+        array([179., 180., 181.])
+        
+        >>> _unwrap_longitudes(np.array([359.0]), reference=2.0)
+        array([-1.])
+        """
+        return longitudes + 360.0 * np.round((reference - longitudes) / 360.0)
+    
     with bbox(extent, epsg) as tile_geom:
         tile_geom.reproject(4326)
+        extent_4326 = tile_geom.extent
         scene_geoms = [x.geometry() for x in src_ids]
         with combine_polygons(scene_geoms) as scene_geom:
             intersection = gpd.overlay(df1=tile_geom.to_geopandas(),
                                        df2=scene_geom.to_geopandas(),
                                        how='intersection')
-            tile_geom_pts = intersection.get_coordinates().to_numpy()
+            tile_geom_pts = intersection.get_coordinates().to_numpy(
+                dtype=float, copy=True)
         scene_geoms = None
     
     # combine geo grid of all scenes into one
@@ -304,12 +325,25 @@ def calc_product_start_stop(
     gdf.drop(columns="xy", inplace=True)
     
     # get grid point coordinates and numerical time stamps for interpolation
-    gdf['timestamp'] = gdf['azimuthTime'].astype(np.int64) / 10 ** 9
-    gridpts = gdf.get_coordinates().to_numpy()
+    epoch = pd.Timestamp(ts_input='1970-01-01', tz='UTC')
+    gdf['timestamp'] = (gdf['azimuthTime'] - epoch).dt.total_seconds()
+    grid_pts = gdf.get_coordinates().to_numpy(dtype=float, copy=True)
     az_time = gdf['timestamp'].values
     
+    # get the extent's center longitude coordinate for unwrapping
+    xmin = float(extent_4326["xmin"])
+    xmax = float(extent_4326["xmax"])
+    lon_reference = (
+        (xmin + xmax + 360.0) / 2.0
+        if xmin > xmax
+        else (xmin + xmax) / 2.0
+    )
+    # unwrap coordinates to a continuous longitude range for interpolation
+    grid_pts[:, 0] = _unwrap_longitudes(grid_pts[:, 0], lon_reference)
+    tile_geom_pts[:, 0] = _unwrap_longitudes(tile_geom_pts[:, 0], lon_reference)
+    
     # perform interpolation
-    rbf = RBFInterpolator(y=gridpts, d=az_time)
+    rbf = RBFInterpolator(y=grid_pts, d=az_time)
     interpolated = rbf(tile_geom_pts)
     
     # check interpolation validity
@@ -319,24 +353,30 @@ def calc_product_start_stop(
     # Make sure the interpolated values do not exceed the actual values.
     # This might happen when the source product geometries are slightly
     # larger than the geo grid extent.
-    out = [max(min(interpolated), min(gdf['timestamp'])),
-           min(max(interpolated), max(gdf['timestamp']))]
+    out = [
+        max(min(interpolated), min(gdf['timestamp'])),
+        min(max(interpolated), max(gdf['timestamp']))
+    ]
+    
+    out = (
+        datetime.fromtimestamp(out[0], tz=timezone.utc),
+        datetime.fromtimestamp(out[1], tz=timezone.utc)
+    )
     
     # double-check that values are plausible
-    if out[0] < min(gdf['timestamp']) or out[1] > max(gdf['timestamp']):
+    if out[0] < min(gdf['azimuthTime']) or out[1] > max(gdf['azimuthTime']):
         raise RuntimeError('The interpolated values exceed the input range.')
     if out[0] >= out[1]:
         raise RuntimeError('The determined acquisition start is larger '
                            'than or equal to the acquisition end.')
     
-    return (datetime.fromtimestamp(out[0], tz=timezone.utc),
-            datetime.fromtimestamp(out[1], tz=timezone.utc))
+    return out
 
 
 def create_data_mask(
         outname: str,
         datasets: list[dict],
-        extent: dict[str, int | float],
+        extent: EXT,
         epsg: int,
         driver: str,
         creation_opt: list[str],
@@ -515,7 +555,7 @@ def create_acq_id_image(
         ref_tif: str,
         datasets: list[dict],
         src_ids: list[ID],
-        extent: dict[str, int | float],
+        extent: EXT,
         epsg: int,
         driver: str,
         creation_opt: list[str],

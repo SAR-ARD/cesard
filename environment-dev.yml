@@ -11,11 +11,11 @@ dependencies:
   - pandas
   - pip
   - pyproj
-  - pyroSAR>=0.35.0
+  - pyroSAR>=0.39.0
   - pystac>=1.8.0,<1.11.0
-  - python>=3.10
+  - python>=3.11
   - python-dateutil
   - requests
   - scipy
-  - spatialist<0.20.0
+  - spatialist>=0.20.1
   - pytest  # for unit tests

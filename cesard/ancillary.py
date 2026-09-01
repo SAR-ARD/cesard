@@ -11,12 +11,13 @@ from multiformats import multihash
 import binascii
 from lxml import etree
 from datetime import datetime, timedelta, timezone
-from osgeo import ogr, osr
+from osgeo import osr
 from pyproj import Geod
 import numpy as np
 import spatialist
 from spatialist.raster import Raster, rasterize
-from spatialist.vector import bbox, intersect, boundary, vectorize, Vector, crsConvert
+from spatialist.vector import (bbox, intersect, hull,
+                               vectorize, Vector)
 import pyroSAR
 from pyroSAR.ancillary import Lock, LockCollection
 from pyroSAR import identify_many
@@ -27,62 +28,65 @@ from .metadata.mapping import URL
 
 log = logging.getLogger('cesard')
 
+CRS = int | str | osr.SpatialReference
+EXT = dict[str, int | float]
+
 
 def buffer_min_overlap(
-        geom1: Vector,
-        geom2: Vector,
+        extent: EXT,
+        geometry: Vector,
         percent: int | float = 1,
         step: int | float | None = None
-) -> Vector:
+) -> EXT:
     """
-    Buffer a rectangular geometry to a minimum overlap with a second geometry.
-    The geometry is iteratively buffered until the minimum overlap is reached.
-    If the overlap of the input geometries is already larger than the defined
-    threshold, a copy of the original geometry is returned.
+    Buffer a rectangular extent to a minimum overlap with a geometry.
+    The extent is iteratively buffered until a minimum overlap with
+    the geometry is reached.
+    If the overlap is already larger than the defined threshold,
+    a copy of the original extent is returned.
 
     Parameters
     ----------
-    geom1:
-        the geometry to be buffered
-    geom2:
-        the reference geometry to intersect with
+    extent:
+        the extent to be buffered. Coordinates are expected to be in
+        the same CRS as the geometry.
+    geometry:
+        the reference geometry to intersect with. The CRS must be projected.
     percent:
-        the minimum overlap in percent of `geom1`
+        the minimum overlap in area percentage of `geometry`
     step:
         the buffering step size. If None, the step size is 0.1 % of the
         average rectangle corner length.
     """
-    geom1_crs = geom1.getProjection(type='epsg')
-    geom2_crs = geom2.getProjection(type='epsg')
-    if geom1_crs != geom2_crs:
-        raise ValueError('both geometries must have the same CRS')
-    geom2_area = geom2.getArea()
-    ext = geom1.extent
-    ext2 = ext.copy()
+    crs: osr.SpatialReference = geometry.getProjection(type='osr')
+    if not crs.IsProjected():
+        raise ValueError('CRS must be projected')
+    
+    geometry_area = geometry.getArea()
     if step is None:
-        xdist = ext['xmax'] - ext['xmin']
-        ydist = ext['ymax'] - ext['ymin']
+        xdist = extent['xmax'] - extent['xmin']
+        ydist = extent['ymax'] - extent['ymin']
         step = (xdist + ydist) / 2 / 1000
+    if step <= 0:
+        raise ValueError('step must be greater than 0')
     buffer = 0
     overlap = 0
+    extent_buffered = extent.copy()
     while overlap <= percent:
         xbuf = buffer * step
         ybuf = buffer * step
-        ext2['xmin'] = ext['xmin'] - xbuf
-        ext2['xmax'] = ext['xmax'] + xbuf
-        ext2['ymin'] = ext['ymin'] - ybuf
-        ext2['ymax'] = ext['ymax'] + ybuf
-        with bbox(coordinates=ext2, crs=geom1_crs) as geom3:
-            ext3 = geom3.extent
-            inter = intersect(obj1=geom2, obj2=geom3)
+        extent_buffered['xmin'] = extent['xmin'] - xbuf
+        extent_buffered['xmax'] = extent['xmax'] + xbuf
+        extent_buffered['ymin'] = extent['ymin'] - ybuf
+        extent_buffered['ymax'] = extent['ymax'] + ybuf
+        with bbox(coordinates=extent_buffered, crs=crs) as geom_buffered:
+            inter = intersect(obj1=geometry, obj2=geom_buffered)
             if inter is not None:
                 inter_area = inter.getArea()
-                overlap = inter_area / geom2_area * 100
+                overlap = inter_area / geometry_area * 100
                 inter.close()
-            else:
-                overlap = 0
         buffer += 1
-    return bbox(coordinates=ext3, crs=geom1_crs)
+    return extent_buffered
 
 
 def buffer_time(
@@ -166,97 +170,13 @@ def check_spacing(
     # the overlap between tiles is either 9780 or 9840 m.
     overlap_edges = [9780, 9840, 109800]
     options = []
-    for i in range(1, 61 * 10): # 60 is the largest spacing
+    for i in range(1, 61 * 10):  # 60 is the largest spacing
         if all([x % (i / 10) == 0 for x in overlap_edges]):
             options.append(i / 10)
     if spacing not in options:
         raise RuntimeError(f'target spacing of {spacing} m does not align '
                            f'with the S2-MGRS tile size and overlaps.\n'
                            f'Options: {options}')
-
-
-def combine_polygons(
-        vector: Vector | list[Vector],
-        crs: int | str = 4326,
-        multipolygon: bool = False,
-        layer_name: str = 'combined'
-) -> Vector:
-    """
-    Combine polygon vector objects into one.
-    The output is a single vector object with the polygons either stored in
-    separate features or combined into a single multipolygon geometry.
-
-    Parameters
-    ----------
-    vector:
-        the input vector object(s). Providing only one object only makes sense when `multipolygon=True`.
-    crs:
-        the target CRS. Default: EPSG:4326
-    multipolygon:
-        combine all polygons into one multipolygon?
-        Default False: write each polygon into a separate feature.
-    layer_name:
-        the layer name of the output vector object.
-
-    Returns
-    -------
-        the combined vector object
-    """
-    if not isinstance(vector, list):
-        vector = [vector]
-    ##############################################################################
-    # check geometry types
-    geometry_names = []
-    field_defs = []
-    for item in vector:
-        field_defs.extend(item.fieldDefs)
-        for feature in item.layer:
-            geom = feature.GetGeometryRef()
-            geometry_names.append(geom.GetGeometryName())
-        item.layer.ResetReading()
-    geom = None
-    geometry_names = list(set(geometry_names))
-    if not all(x == 'POLYGON' for x in geometry_names):
-        raise RuntimeError('All geometries must be of type POLYGON')
-    ##############################################################################
-    vec = Vector(driver='Memory')
-    srs_out = crsConvert(crs, 'osr')
-    if multipolygon:
-        geom_type = ogr.wkbMultiPolygon
-        geom_out = [ogr.Geometry(geom_type)]
-    else:
-        geom_type = ogr.wkbPolygon
-        geom_out = []
-    fields = []
-    vec.addlayer(name=layer_name, srs=srs_out, geomType=geom_type)
-    for item in vector:
-        fieldnames = item.fieldnames
-        if item.srs.IsSame(srs_out):
-            coord_trans = None
-        else:
-            coord_trans = osr.CoordinateTransformation(item.srs, srs_out)
-        for feature in item.layer:
-            geom = feature.GetGeometryRef()
-            if coord_trans is not None:
-                geom.Transform(coord_trans)
-            if multipolygon:
-                geom_out[0].AddGeometry(geom.Clone())
-            else:
-                fields.append({x: feature.GetField(x) for x in fieldnames})
-                geom_out.append(geom.Clone())
-        item.layer.ResetReading()
-    geom = None
-    if multipolygon:
-        geom_out = geom_out[0].UnionCascaded()
-        vec.addfeature(geom_out)
-    else:
-        for field_def in field_defs:
-            if field_def.GetName() not in vec.fieldnames:
-                vec.layer.CreateField(field_def)
-        for i, geom in enumerate(geom_out):
-            vec.addfeature(geometry=geom, fields=fields[i])
-    geom_out = None
-    return vec
 
 
 def compute_hash(
@@ -360,14 +280,15 @@ def datamask(
             return None
         # vectorize the raster data mask
         with vectorize(target=arr, reference=ref) as vec:
-            # compute a valid data boundary geometry (vector data mask)
-            with boundary(vec, expression="value=1") as bounds:
-                # rasterize the vector data mask
-                if not os.path.isfile(dm_ras):
-                    rasterize(vectorobject=bounds, reference=ref,
-                              outname=dm_ras)
-                # write the vector data mask
-                bounds.write(outfile=dm_vec)
+            with vec.filter(expression="value=1") as filt:
+                # compute a valid data boundary geometry (vector data mask)
+                with hull(vectorobject=filt, ratio=0) as bounds:
+                    # rasterize the vector data mask
+                    if not os.path.isfile(dm_ras):
+                        rasterize(vectorobject=bounds, reference=ref,
+                                  outname=dm_ras)
+                    # write the vector data mask
+                    bounds.write(outfile=dm_vec)
         return dm_vec
     
     if os.path.isfile(dm_vec) and os.path.isfile(dm_ras):
@@ -517,59 +438,6 @@ def get_kml() -> str:
     return local
 
 
-def get_max_ext(
-        geometries: list[Vector],
-        buffer: float | None = None,
-        crs: str | int | None = None
-) -> dict[str, float]:
-    """
-    Gets the maximum extent from a list of geometries.
-    
-    Parameters
-    ----------
-    geometries:
-        List of :class:`~spatialist.vector.Vector` geometries.
-    buffer:
-        The buffer in units of the geometries' CRS to add to the extent.
-    crs:
-        The target CRS of the extent. If None (default) the extent is
-        expressed in the CRS of the input geometries.
-    
-    Returns
-    -------
-        The maximum extent of the selected :class:`~spatialist.vector.Vector`
-        geometries including the chosen buffer.
-    """
-    max_ext = {}
-    crs_list = []
-    for geo in geometries:
-        crs_list.append(f"EPSG:{geo.getProjection('epsg')}")
-        if len(max_ext.keys()) == 0:
-            max_ext = geo.extent
-        else:
-            ext = geo.extent
-            for key in ['xmin', 'ymin']:
-                if ext[key] < max_ext[key]:
-                    max_ext[key] = ext[key]
-            for key in ['xmax', 'ymax']:
-                if ext[key] > max_ext[key]:
-                    max_ext[key] = ext[key]
-    crs_list = list(set(crs_list))
-    if len(crs_list) > 1:
-        raise RuntimeError(f'The input geometries are in different CRSs: {crs_list}')
-    max_ext = dict(max_ext)
-    if buffer is not None:
-        max_ext['xmin'] -= buffer
-        max_ext['xmax'] += buffer
-        max_ext['ymin'] -= buffer
-        max_ext['ymax'] += buffer
-    if crs is not None:
-        with bbox(coordinates=max_ext, crs=crs_list[0]) as geo:
-            geo.reproject(projection=crs)
-            max_ext = geo.extent
-    return max_ext
-
-
 def get_tmp_name(suffix: str) -> str:
     """
     Get the name of a temporary file with defined suffix.
@@ -671,14 +539,14 @@ def pixel_size_degrees(
         xres: float, yres: float
 ) -> tuple[float, float]:
     """
-    Convert a pixel size from meters to degrees.
+    Convert a pixel size from meters to degrees for a given point on Earth.
 
     Parameters
     ----------
     lon:
-        longitude in degrees
+        The longitude in degrees of the point on Earth.
     lat:
-        latitude in degrees
+        The latitude in degrees of the point on Earth.
     xres:
         x resolution in meters
     yres:

@@ -17,7 +17,6 @@ Extraction
         evaluate_types
         geometry_from_vec
         get_header_size
-        vec_from_srccoords
 
 XML
 ^^^

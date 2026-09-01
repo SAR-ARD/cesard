@@ -6,9 +6,9 @@ multiformats>=0.3.1
 numpy
 pandas
 pyproj
-pyroSAR>=0.35.0
+pyroSAR>=0.39.0
 pystac>=1.8.0,<1.11.0
 python-dateutil
 requests
 scipy
-spatialist<0.20.0
+spatialist>=0.20.1

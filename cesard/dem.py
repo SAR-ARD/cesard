@@ -1,15 +1,15 @@
 import os
 import re
-import tempfile
 import itertools
 from getpass import getpass
 from pyroSAR.drivers import ID
 from pyroSAR.auxdata import dem_autoload, dem_create
 from pyroSAR.ancillary import Lock
 import cesard.tile_extraction as tile_ex
-from cesard.ancillary import (get_max_ext, get_tmp_name,
-                              pixel_size_degrees, vrt_add_overviews)
-from spatialist.vector import bbox, intersect, Vector
+from cesard.ancillary import pixel_size_degrees
+from spatialist.auxil import latlon_extent_center
+from spatialist.vector import bbox, intersect, Vector, combine_polygons
+from osgeo import gdal
 from typing import Literal
 import logging
 
@@ -74,12 +74,13 @@ def mosaic(
     Parameters
     ----------
     geometry:
-        The geometry to be covered by the mosaic. The geometry's CRS is
-        used as target CRS.
+        The geometry to be covered by the mosaic.
+        The geometry's CRS is used as target CRS.
     dem_type:
         The DEM type.
+        See function :func:`pyroSAR.auxdata.dem_autoload` for options.
     outname:
-        The name of the mosaic.
+        The name of the mosaic file.
     tr:
         the target resolution as (xres, yres) in units of the target CRS.
     username:
@@ -94,32 +95,23 @@ def mosaic(
     threads:
         The number of threads to pass to :func:`pyroSAR.auxdata.dem_create`.
     """
-    epsg = geometry.getProjection('epsg')
-    ext = geometry.extent
     if not os.path.isfile(outname):
         username, password = authenticate(dem_type=dem_type,
                                           username=username,
                                           password=password)
-        if dem_type == 'GETASSE30':
-            geoid_convert = False
-        else:
-            geoid_convert = True
-        geoid = 'EGM2008'
-        vrt = outname.replace('.tif', '.vrt')
-        if epsg != 4326:
-            geometry = geometry.clone()
-            geometry.reproject(4326)
-        dem_autoload([geometry], demType=dem_type,
-                     vrt=vrt, buffer=0.01, product='dem',
-                     username=username, password=password)
-        bounds = [ext['xmin'], ext['ymin'], ext['xmax'], ext['ymax']]
-        dem_create(src=vrt, dst=outname, pbar=False, tr=tr,
-                   geoid_convert=geoid_convert, geoid=geoid,
-                   threads=threads, nodata=-32767, t_srs=epsg,
-                   outputBounds=bounds)
-        os.remove(vrt)
-        if epsg != 4326:
-            geometry = None
+        geometry = geometry.wrap_antimeridian(inplace=False)
+        epsg = geometry.getProjection('epsg')
+        ext = geometry.extent
+        if ext['xmin'] > ext['xmax']:
+            raise RuntimeError('geometry crosses the antimeridian')
+        with geometry.reproject(projection=4326, inplace=False) as geometry_4326:
+            tiles = dem_autoload(vectorobject=geometry_4326, demType=dem_type,
+                                 buffer=0.01, product='dem',
+                                 username=username, password=password)
+            bounds = [ext['xmin'], ext['ymin'], ext['xmax'], ext['ymax']]
+            dem_create(vectorobject=geometry_4326, src=tiles, dst=outname,
+                       t_srs=epsg, tr=tr, threads=threads,
+                       outputBounds=bounds)
 
 
 def prepare(
@@ -130,7 +122,7 @@ def prepare(
         tr: None | tuple[int | float, int | float] = None,
         username: str | None = None,
         password: str | None = None
-) -> list[str]:
+) -> str | list[str]:
     """
     Prepare DEM files for SAR processing.
 
@@ -156,7 +148,7 @@ def prepare(
 
     Returns
     -------
-        the names of the newly created DEM files.
+        the name(s) of the newly created DEM file(s).
     """
     dem_type_lookup = {'Copernicus 10m EEA DEM': 'EEA10',
                        'Copernicus 30m Global DEM II': 'GLO30II',
@@ -172,9 +164,8 @@ def prepare(
                 if tr is not None:
                     with scene.geometry() as vec:
                         ext = vec.extent
-                    tr = pixel_size_degrees(lon=abs(ext['xmax'] - ext['xmin']) / 2,
-                                            lat=abs(ext['ymax'] - ext['ymin']) / 2,
-                                            xres=tr[0], yres=tr[1])
+                    lon, lat = latlon_extent_center(ext)
+                    tr = pixel_size_degrees(lon=lon, lat=lat, xres=tr[0], yres=tr[1])
                 with scene.bbox(buffer=0.002) as geom:
                     mosaic(geometry=geom, outname=fname_dem,
                            dem_type=dem_type, tr=tr,
@@ -285,12 +276,6 @@ def retile(
     --------
     cesard.tile_extraction.tile_from_aoi
     """
-    if dem_type == 'GETASSE30':
-        geoid_convert = False
-    else:
-        geoid_convert = True
-    geoid = 'EGM2008'  # applies to all Copernicus DEM options
-    
     tr = 10  # target resolution. Lower resolutions can be created virtually using VRTs.
     # additional creation options for gdalwarp
     create_options = ['COMPRESS=LERC_ZSTD', 'MAX_Z_ERROR=0']
@@ -317,12 +302,13 @@ def retile(
     for epsg, group in itertools.groupby(tiles, lambda x: x.getProjection('epsg')):
         vectors = list(group)
         
-        # In case the DEM tiles are to be prepared as well, create a new list of tiles.
+        # In case the DEM tiles are to be prepared as well nad ``dem_strict=True``,
+        # create a new list of tiles.
         # This new list contains all tiles covering the AOI but all re-projected to the
         # current CRS. This way, a DEM mosaic can be created from prepared tiles in any
-        # UTM zone covering the AOI while fully covering it. This was needed for processing
-        # full SAR scenes to different UTM zones. In the current workflow this in no longer
-        # used.
+        # UTM zone covering the AOI while fully covering it.
+        # This was needed for processing full SAR scenes to different UTM zones.
+        # In the current workflow this is no longer used.
         if dem_dir is not None and not dem_strict:
             vectors = tile_ex.tile_from_aoi(
                 vector=vector.bbox(),
@@ -332,100 +318,62 @@ def retile(
                 tilenames=tilenames)
         
         # Get the bounding box of the tile vector objects and use this from here on
-        ext = get_max_ext(geometries=vectors, buffer=200)
-        with bbox(coordinates=ext, crs=epsg) as box:
-            box.reproject(4326)
-            ext_4326 = box.extent
+        with combine_polygons(vectors) as combined:
+            with combined.bbox(buffer=200) as box:
+                box.reproject(4326)
+                ext_4326 = box.extent
         
-        if dem_dir is not None:
-            dem_names_base = ['{}_DEM.tif'.format(tile.mgrs) for tile in vectors]
-            dem_names = [os.path.join(dem_dir, x) for x in dem_names_base]
-            dem_target = [(tile, name) for tile, name in zip(vectors, dem_names)
-                          if not os.path.isfile(name)]
-            fname_dem_tmp = tempfile.NamedTemporaryFile(suffix='.vrt', dir=dem_dir).name
-        else:
-            dem_target = dict()
-            fname_dem_tmp = None
-        if wbm_dir is not None:
-            # exclude the reprojected tiles from the list of WBM tiles
-            tiles_wbm = [x for x in vectors if not re.search('_[0-9]*', x.mgrs)]
-            wbm_names_base = ['{}_WBM.tif'.format(tile.mgrs) for tile in tiles_wbm]
-            wbm_names = [os.path.join(wbm_dir, x) for x in wbm_names_base]
-            wbm_target = [(tile, name) for tile, name in zip(tiles_wbm, wbm_names)
-                          if not os.path.isfile(name)]
-            fname_wbm_tmp = tempfile.NamedTemporaryFile(suffix='.vrt', dir=wbm_dir).name
-        else:
-            wbm_target = dict()
-            fname_wbm_tmp = None
-        
-        # stop if no files need to be created
-        if len(dem_target) == 0 and len(wbm_target) == 0:
-            continue
-        ###############################################
-        # DEM/WBM download and VRT mosaic creation
-        
-        # get download authentication if either WBM or DEM VRTs will be created
-        c_wbm = fname_wbm_tmp is not None and not os.path.isfile(fname_wbm_tmp)
-        c_dem = fname_dem_tmp is not None and not os.path.isfile(fname_dem_tmp)
-        if c_wbm or c_dem:
+        for product, target in [
+            ('dem', dem_dir),
+            ('wbm', wbm_dir)
+        ]:
+            if target is None:
+                continue
+            
+            if product == 'wbm':
+                vectors = [x for x in vectors if not re.search('_[0-9]*', x.mgrs)]
+            out_names_base = [f'{tile.mgrs}_{product.upper()}.tif' for tile in vectors]
+            out_names = [os.path.join(target, x) for x in out_names_base]
+            out_target = [
+                (tile, name)
+                for tile, name in zip(vectors, out_names)
+                if not os.path.isfile(name)
+            ]
+            
+            if len(out_target) == 0:
+                continue
+            ###############################################
+            # download tiles
             username, password = authenticate(dem_type=dem_type,
                                               username=username,
                                               password=password)
-        
-        # download WBM tiles and combine them in a VRT mosaic
-        if c_wbm:
-            with Lock(fname_wbm_tmp, timeout=lock_timeout):
-                if not os.path.isfile(fname_wbm_tmp):
-                    with bbox(coordinates=ext_4326, crs=4326) as vec:
-                        dem_autoload(geometries=[vec], demType=dem_type,
-                                     vrt=fname_wbm_tmp, product='wbm',
-                                     username=username, password=password,
-                                     crop=False, lock_timeout=lock_timeout)
-        # download DEM tiles and combine them in a VRT mosaic
-        if c_dem:
-            with Lock(fname_dem_tmp, timeout=lock_timeout):
-                if not os.path.isfile(fname_dem_tmp):
-                    with bbox(coordinates=ext_4326, crs=4326) as vec:
-                        dem_autoload(geometries=[vec], demType=dem_type,
-                                     vrt=fname_dem_tmp, product='dem',
-                                     username=username, password=password,
-                                     crop=False, lock_timeout=lock_timeout)
-        ###############################################
-        # create final DEM tiles
-        if len(dem_target) > 0:
-            tiles = [x[0].mgrs for x in dem_target]
-            log.info(f'creating DEM MGRS tiles: {tiles}')
-        for tile, filename in dem_target:
-            ext = tile.extent
-            bounds = [ext['xmin'], ext['ymin'],
-                      ext['xmax'], ext['ymax']]
-            with Lock(filename, timeout=lock_timeout):
-                if not os.path.isfile(filename):
-                    dem_create(src=fname_dem_tmp, dst=filename,
-                               t_srs=epsg, tr=(tr, tr), pbar=False,
-                               geoid_convert=geoid_convert, geoid=geoid,
-                               outputBounds=bounds, threads=threads,
-                               nodata=-32767, creationOptions=create_options)
-        if fname_dem_tmp is not None:
-            os.remove(fname_dem_tmp)
-        ###############################################
-        # create final WBM tiles
-        if len(wbm_target) > 0:
-            tiles = [x[0].mgrs for x in wbm_target]
-            log.info(f'creating WBM MGRS tiles: {tiles}')
-        for tile, filename in wbm_target:
-            ext = tile.extent
-            bounds = [ext['xmin'], ext['ymin'],
-                      ext['xmax'], ext['ymax']]
-            with Lock(filename):
-                if not os.path.isfile(filename):
-                    dem_create(src=fname_wbm_tmp, dst=filename,
-                               t_srs=epsg, tr=(tr, tr),
-                               resampleAlg='mode', pbar=False,
-                               outputBounds=bounds, threads=threads,
-                               creationOptions=create_options)
-        if fname_wbm_tmp is not None:
-            os.remove(fname_wbm_tmp)
+            
+            with bbox(coordinates=ext_4326, crs=4326) as vec:
+                out_tiles = dem_autoload(
+                    vectorobject=vec, demType=dem_type,
+                    product=product,
+                    username=username, password=password,
+                    crop=False, lock_timeout=lock_timeout
+                )
+            ###############################################
+            # create MGRS tiles
+            tiles = [x[0].mgrs for x in out_target]
+            log.info(f'creating {product.upper()} MGRS tiles: {tiles}')
+            
+            for tile, filename in out_target:
+                ext = tile.extent
+                bounds = [ext['xmin'], ext['ymin'],
+                          ext['xmax'], ext['ymax']]
+                with Lock(filename, timeout=lock_timeout):
+                    if not os.path.isfile(filename):
+                        with bbox(coordinates=ext_4326, crs=4326) as vec:
+                            dem_create(
+                                vectorobject=vec,
+                                src=out_tiles, dst=filename,
+                                t_srs=epsg, tr=(tr, tr), pbar=False,
+                                outputBounds=bounds, threads=threads,
+                                creationOptions=create_options
+                            )
 
 
 def to_mgrs(
@@ -434,13 +382,12 @@ def to_mgrs(
         dem_type: str,
         overviews: list[int],
         tr: tuple[int | float, int | float],
-        format: str = 'COG',
         create_options: list[str] | None = None,
         threads: int | None = None,
         pbar: bool = False
 ) -> None:
     """
-    Create an MGRS-tiled DEM file.
+    Create an MGRS-tiled DEM COG file.
     
     Parameters
     ----------
@@ -454,37 +401,71 @@ def to_mgrs(
         The overview levels
     tr:
         the target resolution as (x, y)
-    format:
-        the output file format
     create_options:
         additional creation options to be passed to :func:`spatialist.auxil.gdalwarp`.
+        The following defaults are applied if not defined:
+        
+        - ``BLOCKSIZE=512``
+        - ``OVERVIEW_RESAMPLING=AVERAGE``
     threads:
         The number of threads to pass to :func:`pyroSAR.auxdata.dem_create`.
         Default `None`: use the value of `GDAL_NUM_THREADS` without modification.
     pbar:
         add a progress bar?
     """
-    if dem_type == 'GETASSE30':
-        geoid_convert = False
+    if create_options is not None:
+        create_options = {k: v for k, v in [x.split('=') for x in create_options]}
     else:
-        geoid_convert = True
-    geoid = 'EGM2008'  # applies to all Copernicus DEM options
+        create_options = {}
+    
     with tile_ex.aoi_from_tile(tile=tile) as vec:
         ext = vec.extent
         epsg = vec.getProjection('epsg')
-    bounds = [ext['xmin'], ext['ymin'], ext['xmax'], ext['ymax']]
-    buffer = 200
-    ext['xmin'] -= buffer
-    ext['ymin'] -= buffer
-    ext['xmax'] += buffer
-    ext['ymax'] += buffer
-    vrt = get_tmp_name(suffix='.vrt')
-    with bbox(coordinates=ext, crs=epsg) as vec:
-        vec.reproject(4326)
-        dem_autoload(geometries=[vec], demType=dem_type, vrt=vrt)
-    vrt_add_overviews(vrt=vrt, overviews=overviews)
-    dem_create(src=vrt, dst=dst, t_srs=epsg, tr=tr,
-               geoid_convert=geoid_convert, geoid=geoid, pbar=pbar,
-               outputBounds=bounds, threads=threads, format=format,
-               creationOptions=create_options)
-    os.remove(vrt)
+        bounds = [ext['xmin'], ext['ymin'], ext['xmax'], ext['ymax']]
+        with vec.bbox(buffer=200) as box:
+            box.reproject(4326)
+            tiles = dem_autoload(vectorobject=box, demType=dem_type)
+            tmp = '/vsimem/dem.tif'
+            
+            blocksize = create_options.get('BLOCKSIZE', '512')
+            create_options_tmp = {
+                'TILED': 'YES',
+                'BLOCKXSIZE': blocksize,
+                'BLOCKYSIZE': blocksize
+            }
+            
+            # create a plain in-memory GeoTIFF
+            dem_create(vectorobject=box, src=tiles, dst=tmp,
+                       t_srs=epsg, tr=tr, pbar=pbar,
+                       outputBounds=bounds, threads=threads,
+                       creationOptions=create_options_tmp
+                       )
+    
+    # add the custom overview levels to it
+    ds = gdal.Open(tmp, gdal.GA_Update)
+    resampling = create_options.get('OVERVIEW_RESAMPLING', 'AVERAGE')
+    ds.BuildOverviews(
+        resampling=resampling,
+        overviewlist=overviews,
+    )
+    
+    # Compatibility metadata for GDAL < 3.12.
+    # Older COG drivers copy the existing overview pixels, but do not
+    # preserve their RESAMPLING metadata in the output COG.
+    # Hence, the metadata is set in a custom metadata item.
+    ds.SetMetadataItem(
+        'OVERVIEW_RESAMPLING',
+        resampling,
+    )
+    
+    # convert it to a final COG file on disk
+    create_options['OVERVIEWS'] = 'FORCE_USE_EXISTING'
+    out = gdal.Translate(
+        destName=dst,
+        srcDS=ds,
+        format='COG',
+        creationOptions=create_options
+    )
+    out = None
+    ds = None
+    gdal.Unlink(tmp)

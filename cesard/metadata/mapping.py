@@ -113,7 +113,7 @@ URL = {
 DEM_MAP = {
     'GETASSE30':
         {'access': 'https://step.esa.int/auxdata/dem/GETASSE30',
-         'ref': 'https://www.brockmann-consult.de/beam/doc/help/visat/GETASSE30ElevationModel.html',
+         'ref': 'https://step.esa.int/main/wp-content/help/versions/14.0.0/snap/org.esa.snap.snap.help/desktop/GETASSE30ElevationModel.html',
          'type': 'elevation',
          'gsd': '30 arcsec',
          'egm': None},
