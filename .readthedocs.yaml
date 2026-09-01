@@ -18,5 +18,4 @@ formats:
   - pdf
 
 sphinx:
-  builder: html
   configuration: docs/source/conf.py
