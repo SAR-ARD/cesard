@@ -28,6 +28,7 @@ AffineTransform = tuple[float, float, float, float, float, float]
 OrbitDirection = Literal["ascending", "descending"]
 AntennaLookDirection = Literal["LEFT", "RIGHT"]
 Polarization = Literal["HH", "HV", "VH", "VV"]
+PositiveFloat = Annotated[float, Field(gt=0)]
 
 # Reserved values for mandatory metadata whose derivation is not yet
 # implemented. These are valid interface values and are intentionally kept
@@ -354,7 +355,7 @@ class ProductMetadata(MetadataModel):
 
 
 class SwathAxisMetadata(MetadataModel):
-    """Per-swath sampling and resolution metadata along one SAR image axis."""
+    """Sampling and resolution metadata along one SAR image axis."""
     
     look_bandwidth: dict[str, NumberOrNotImplemented | None] = Field(
         description=(
@@ -363,9 +364,9 @@ class SwathAxisMetadata(MetadataModel):
             "unavailable/not-applicable source metadata."
         )
     )
-    number_of_looks: dict[str, float]
-    pixel_spacing: dict[str, float]
-    resolution: dict[str, float]
+    number_of_looks: dict[str, PositiveFloat]
+    pixel_spacing: dict[str, PositiveFloat]
+    resolution: dict[str, PositiveFloat]
 
 
 class IncidenceAngleMetadata(MetadataModel):
@@ -454,11 +455,13 @@ class SourceMetadata(MetadataModel):
             raise ValueError("source time_stop must not precede time_start")
         
         expected = set(self.swaths)
-        for axis_name, axis in (("azimuth", self.azimuth), ("range", self.range)):
+        for axis_name, axis in (
+                ("azimuth", self.azimuth),
+                ("range", self.range)
+        ):
             for field_name in (
                     "look_bandwidth",
                     "number_of_looks",
-                    "pixel_spacing",
                     "resolution",
             ):
                 actual = set(getattr(axis, field_name))
