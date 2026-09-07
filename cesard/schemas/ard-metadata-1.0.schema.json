@@ -1,0 +1,1459 @@
+{
+  "$comment": "Reserved CESARD implementation sentinels: NOT_IMPLEMENTED_NUMBER = -99999; NOT_IMPLEMENTED_TEXT = 'TBD'. These values denote mandatory metadata whose derivation is not yet implemented and are distinct from null/None.",
+  "$defs": {
+    "AxisAccuracy": {
+      "additionalProperties": false,
+      "description": "Bias and standard deviation along one horizontal axis.\n\n``-99999`` is reserved for a mandatory value whose derivation is not yet\nimplemented by the producer. ``None`` is deliberately not accepted.",
+      "properties": {
+        "bias": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/NotImplementedNumber"
+            }
+          ],
+          "description": "Horizontal bias, or -99999 if derivation of this mandatory metadata value is not yet implemented.",
+          "title": "Bias"
+        },
+        "standard_deviation": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/NotImplementedNumber"
+            }
+          ],
+          "description": "Horizontal standard deviation, or -99999 if derivation of this mandatory metadata value is not yet implemented.",
+          "title": "Standard Deviation"
+        }
+      },
+      "required": [
+        "bias",
+        "standard_deviation"
+      ],
+      "title": "AxisAccuracy",
+      "type": "object"
+    },
+    "BackscatterMetadata": {
+      "additionalProperties": false,
+      "description": "Backscatter measurement representation and multilooking metadata.",
+      "properties": {
+        "measurement": {
+          "title": "Measurement",
+          "type": "string"
+        },
+        "convention": {
+          "title": "Convention",
+          "type": "string"
+        },
+        "conversion_equation": {
+          "title": "Conversion Equation",
+          "type": "string"
+        },
+        "range_number_of_looks": {
+          "exclusiveMinimum": 0,
+          "title": "Range Number Of Looks",
+          "type": "number"
+        },
+        "azimuth_number_of_looks": {
+          "exclusiveMinimum": 0,
+          "title": "Azimuth Number Of Looks",
+          "type": "number"
+        },
+        "equivalent_number_of_looks": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Equivalent Number Of Looks"
+        }
+      },
+      "required": [
+        "measurement",
+        "convention",
+        "conversion_equation",
+        "range_number_of_looks",
+        "azimuth_number_of_looks"
+      ],
+      "title": "BackscatterMetadata",
+      "type": "object"
+    },
+    "Card4lMetadata": {
+      "additionalProperties": false,
+      "description": "Reference to the applicable CARD4L product-family specification.",
+      "properties": {
+        "specification": {
+          "title": "Specification",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "string"
+        },
+        "document": {
+          "title": "Document",
+          "type": "string"
+        }
+      },
+      "required": [
+        "specification",
+        "version",
+        "document"
+      ],
+      "title": "Card4lMetadata",
+      "type": "object"
+    },
+    "CommonMetadata": {
+      "additionalProperties": false,
+      "description": "Metadata shared by the ARD product and all contributing source scenes.",
+      "properties": {
+        "antenna_look_direction": {
+          "enum": [
+            "LEFT",
+            "RIGHT"
+          ],
+          "title": "Antenna Look Direction",
+          "type": "string"
+        },
+        "constellation": {
+          "title": "Constellation",
+          "type": "string"
+        },
+        "instrument_short_name": {
+          "title": "Instrument Short Name",
+          "type": "string"
+        },
+        "operational_mode": {
+          "title": "Operational Mode",
+          "type": "string"
+        },
+        "orbit_direction": {
+          "enum": [
+            "ascending",
+            "descending"
+          ],
+          "title": "Orbit Direction",
+          "type": "string"
+        },
+        "orbit_mean_altitude": {
+          "exclusiveMinimum": 0,
+          "title": "Orbit Mean Altitude",
+          "type": "number"
+        },
+        "orbit_number_absolute": {
+          "minimum": 0,
+          "title": "Orbit Number Absolute",
+          "type": "integer"
+        },
+        "orbit_number_relative": {
+          "minimum": 0,
+          "title": "Orbit Number Relative",
+          "type": "integer"
+        },
+        "platform_full_name": {
+          "title": "Platform Full Name",
+          "type": "string"
+        },
+        "platform_identifier": {
+          "title": "Platform Identifier",
+          "type": "string"
+        },
+        "platform_reference": {
+          "title": "Platform Reference",
+          "type": "string"
+        },
+        "platform_short_name": {
+          "title": "Platform Short Name",
+          "type": "string"
+        },
+        "polarizations": {
+          "items": {
+            "enum": [
+              "HH",
+              "HV",
+              "VH",
+              "VV"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Polarizations",
+          "type": "array"
+        },
+        "polarization_mode": {
+          "title": "Polarization Mode",
+          "type": "string"
+        },
+        "processing_level": {
+          "title": "Processing Level",
+          "type": "string"
+        },
+        "radar_band": {
+          "title": "Radar Band",
+          "type": "string"
+        },
+        "radar_center_frequency": {
+          "exclusiveMinimum": 0,
+          "title": "Radar Center Frequency",
+          "type": "number"
+        },
+        "sensor_type": {
+          "title": "Sensor Type",
+          "type": "string"
+        },
+        "swath_identifier": {
+          "title": "Swath Identifier",
+          "type": "string"
+        },
+        "wrs_longitude_grid": {
+          "minimum": 0,
+          "title": "Wrs Longitude Grid",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "antenna_look_direction",
+        "constellation",
+        "instrument_short_name",
+        "operational_mode",
+        "orbit_direction",
+        "orbit_mean_altitude",
+        "orbit_number_absolute",
+        "orbit_number_relative",
+        "platform_full_name",
+        "platform_identifier",
+        "platform_reference",
+        "platform_short_name",
+        "polarizations",
+        "polarization_mode",
+        "processing_level",
+        "radar_band",
+        "radar_center_frequency",
+        "sensor_type",
+        "swath_identifier",
+        "wrs_longitude_grid"
+      ],
+      "title": "CommonMetadata",
+      "type": "object"
+    },
+    "CompressionMetadata": {
+      "additionalProperties": false,
+      "description": "Compression configuration used for product raster assets.",
+      "properties": {
+        "type": {
+          "title": "Type",
+          "type": "string"
+        },
+        "z_errors": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Z Errors",
+          "type": "object"
+        }
+      },
+      "required": [
+        "type",
+        "z_errors"
+      ],
+      "title": "CompressionMetadata",
+      "type": "object"
+    },
+    "DEMMetadata": {
+      "additionalProperties": false,
+      "description": "Digital elevation model and Earth gravitational model metadata.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "type": {
+          "title": "Type",
+          "type": "string"
+        },
+        "reference": {
+          "title": "Reference",
+          "type": "string"
+        },
+        "access": {
+          "title": "Access",
+          "type": "string"
+        },
+        "gsd": {
+          "$ref": "#/$defs/GroundSamplingDistance"
+        },
+        "resampling_method": {
+          "title": "Resampling Method",
+          "type": "string"
+        },
+        "egm_reference": {
+          "title": "Egm Reference",
+          "type": "string"
+        },
+        "egm_resampling_method": {
+          "title": "Egm Resampling Method",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "type",
+        "reference",
+        "access",
+        "gsd",
+        "resampling_method",
+        "egm_reference",
+        "egm_resampling_method"
+      ],
+      "title": "DEMMetadata",
+      "type": "object"
+    },
+    "GeometricAccuracyMetadata": {
+      "additionalProperties": false,
+      "description": "Horizontal geolocation accuracy metadata.",
+      "properties": {
+        "type": {
+          "title": "Type",
+          "type": "string"
+        },
+        "eastern": {
+          "$ref": "#/$defs/AxisAccuracy"
+        },
+        "northern": {
+          "$ref": "#/$defs/AxisAccuracy"
+        },
+        "radial_rmse": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/NotImplementedNumber"
+            }
+          ],
+          "description": "Radial RMSE in metres, or -99999 if derivation of this mandatory metadata value is not yet implemented.",
+          "title": "Radial Rmse"
+        },
+        "reference": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/NotImplementedText"
+            }
+          ],
+          "description": "Reference documenting the accuracy estimate, or 'TBD' if this mandatory value is not yet implemented.",
+          "title": "Reference"
+        }
+      },
+      "required": [
+        "type",
+        "eastern",
+        "northern",
+        "radial_rmse",
+        "reference"
+      ],
+      "title": "GeometricAccuracyMetadata",
+      "type": "object"
+    },
+    "GeometricCorrectionMetadata": {
+      "additionalProperties": false,
+      "description": "Geometric correction algorithm and resulting accuracy.",
+      "properties": {
+        "algorithm": {
+          "title": "Algorithm",
+          "type": "string"
+        },
+        "resampling_method": {
+          "title": "Resampling Method",
+          "type": "string"
+        },
+        "accuracy": {
+          "$ref": "#/$defs/GeometricAccuracyMetadata"
+        }
+      },
+      "required": [
+        "algorithm",
+        "resampling_method",
+        "accuracy"
+      ],
+      "title": "GeometricCorrectionMetadata",
+      "type": "object"
+    },
+    "GeometryMetadata": {
+      "additionalProperties": false,
+      "description": "Spatial footprint metadata in EPSG:4326 and, optionally, native CRS.",
+      "properties": {
+        "bbox": {
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Bbox",
+          "type": "array"
+        },
+        "bbox_native": {
+          "anyOf": [
+            {
+              "maxItems": 4,
+              "minItems": 4,
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bbox Native"
+        },
+        "geometry": {
+          "additionalProperties": true,
+          "title": "Geometry",
+          "type": "object"
+        }
+      },
+      "required": [
+        "bbox",
+        "geometry"
+      ],
+      "title": "GeometryMetadata",
+      "type": "object"
+    },
+    "GridMetadata": {
+      "additionalProperties": false,
+      "description": "Raster grid, CRS and MGRS metadata for the ARD product.",
+      "properties": {
+        "epsg": {
+          "exclusiveMinimum": 0,
+          "title": "Epsg",
+          "type": "integer"
+        },
+        "wkt": {
+          "title": "Wkt",
+          "type": "string"
+        },
+        "rows": {
+          "exclusiveMinimum": 0,
+          "title": "Rows",
+          "type": "integer"
+        },
+        "columns": {
+          "exclusiveMinimum": 0,
+          "title": "Columns",
+          "type": "integer"
+        },
+        "pixel_spacing_row": {
+          "exclusiveMinimum": 0,
+          "title": "Pixel Spacing Row",
+          "type": "number"
+        },
+        "pixel_spacing_column": {
+          "exclusiveMinimum": 0,
+          "title": "Pixel Spacing Column",
+          "type": "number"
+        },
+        "transform": {
+          "maxItems": 6,
+          "minItems": 6,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Transform",
+          "type": "array"
+        },
+        "mgrs_id": {
+          "title": "Mgrs Id",
+          "type": "string"
+        },
+        "pixel_coordinate_convention": {
+          "title": "Pixel Coordinate Convention",
+          "type": "string"
+        },
+        "number_of_border_pixels": {
+          "minimum": 0,
+          "title": "Number Of Border Pixels",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "epsg",
+        "wkt",
+        "rows",
+        "columns",
+        "pixel_spacing_row",
+        "pixel_spacing_column",
+        "transform",
+        "mgrs_id",
+        "pixel_coordinate_convention",
+        "number_of_border_pixels"
+      ],
+      "title": "GridMetadata",
+      "type": "object"
+    },
+    "GroundSamplingDistance": {
+      "additionalProperties": false,
+      "description": "Ground sampling distance with an explicit unit.",
+      "properties": {
+        "value": {
+          "exclusiveMinimum": 0,
+          "title": "Value",
+          "type": "number"
+        },
+        "unit": {
+          "default": "m",
+          "title": "Unit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "title": "GroundSamplingDistance",
+      "type": "object"
+    },
+    "IncidenceAngleMetadata": {
+      "additionalProperties": false,
+      "description": "Near-, mid- and far-range incidence angles in degrees.",
+      "properties": {
+        "minimum": {
+          "title": "Minimum",
+          "type": "number"
+        },
+        "maximum": {
+          "title": "Maximum",
+          "type": "number"
+        },
+        "mid_swath": {
+          "title": "Mid Swath",
+          "type": "number"
+        }
+      },
+      "required": [
+        "minimum",
+        "maximum",
+        "mid_swath"
+      ],
+      "title": "IncidenceAngleMetadata",
+      "type": "object"
+    },
+    "NoiseRemovalMetadata": {
+      "additionalProperties": false,
+      "description": "Thermal-noise removal metadata.",
+      "properties": {
+        "applied": {
+          "title": "Applied",
+          "type": "boolean"
+        },
+        "algorithm": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Algorithm"
+        }
+      },
+      "required": [
+        "applied"
+      ],
+      "title": "NoiseRemovalMetadata",
+      "type": "object"
+    },
+    "NotImplementedNumber": {
+      "const": -99999,
+      "type": "integer"
+    },
+    "NotImplementedText": {
+      "const": "TBD",
+      "type": "string"
+    },
+    "PerformanceEstimate": {
+      "additionalProperties": false,
+      "description": "Minimum, mean and maximum noise-equivalent intensity estimate.",
+      "properties": {
+        "minimum": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Minimum"
+        },
+        "mean": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mean"
+        },
+        "maximum": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Maximum"
+        }
+      },
+      "title": "PerformanceEstimate",
+      "type": "object"
+    },
+    "ProcessingMetadata": {
+      "additionalProperties": false,
+      "description": "Information about the processor that created a product or source scene.",
+      "properties": {
+        "facility": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Facility"
+        },
+        "date": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Date"
+        },
+        "mode": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mode"
+        },
+        "processor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Processor"
+        },
+        "software": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Software",
+          "type": "object"
+        }
+      },
+      "title": "ProcessingMetadata",
+      "type": "object"
+    },
+    "ProductMetadata": {
+      "additionalProperties": false,
+      "description": "Metadata describing the generated ARD product.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "product_type": {
+          "title": "Product Type",
+          "type": "string"
+        },
+        "acquisition_type": {
+          "title": "Acquisition Type",
+          "type": "string"
+        },
+        "status": {
+          "title": "Status",
+          "type": "string"
+        },
+        "access": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Access"
+        },
+        "doi": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Doi"
+        },
+        "license": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "License"
+        },
+        "time_start": {
+          "format": "date-time",
+          "title": "Time Start",
+          "type": "string"
+        },
+        "time_stop": {
+          "format": "date-time",
+          "title": "Time Stop",
+          "type": "string"
+        },
+        "time_created": {
+          "format": "date-time",
+          "title": "Time Created",
+          "type": "string"
+        },
+        "geometry": {
+          "$ref": "#/$defs/GeometryMetadata"
+        },
+        "grid": {
+          "$ref": "#/$defs/GridMetadata"
+        },
+        "processing": {
+          "$ref": "#/$defs/ProcessingMetadata"
+        },
+        "card4l": {
+          "$ref": "#/$defs/Card4lMetadata"
+        },
+        "compression": {
+          "$ref": "#/$defs/CompressionMetadata"
+        },
+        "dem": {
+          "$ref": "#/$defs/DEMMetadata"
+        },
+        "backscatter": {
+          "$ref": "#/$defs/BackscatterMetadata"
+        },
+        "geometric_correction": {
+          "$ref": "#/$defs/GeometricCorrectionMetadata"
+        },
+        "radiometric_accuracy": {
+          "$ref": "#/$defs/RadiometricAccuracyMetadata"
+        },
+        "noise_removal": {
+          "$ref": "#/$defs/NoiseRemovalMetadata"
+        },
+        "ancillary_data_kml": {
+          "title": "Ancillary Data Kml",
+          "type": "string"
+        },
+        "gridding_convention_url": {
+          "title": "Gridding Convention Url",
+          "type": "string"
+        },
+        "rtc_algorithm": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rtc Algorithm"
+        },
+        "number_of_acquisitions": {
+          "exclusiveMinimum": 0,
+          "title": "Number Of Acquisitions",
+          "type": "integer"
+        },
+        "speckle_filter_applied": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Speckle Filter Applied"
+        },
+        "ellipsoidal_height": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ellipsoidal Height"
+        },
+        "wind_normalization": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WindNormalizationMetadata"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "name",
+        "product_type",
+        "acquisition_type",
+        "status",
+        "time_start",
+        "time_stop",
+        "time_created",
+        "geometry",
+        "grid",
+        "processing",
+        "card4l",
+        "compression",
+        "dem",
+        "backscatter",
+        "geometric_correction",
+        "radiometric_accuracy",
+        "noise_removal",
+        "ancillary_data_kml",
+        "gridding_convention_url",
+        "number_of_acquisitions"
+      ],
+      "title": "ProductMetadata",
+      "type": "object"
+    },
+    "RadiometricAccuracyMetadata": {
+      "additionalProperties": false,
+      "description": "Absolute and relative radiometric accuracy.\n\n``-99999`` is reserved for mandatory values whose derivation is not yet\nimplemented by the producer.",
+      "properties": {
+        "absolute": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/NotImplementedNumber"
+            }
+          ],
+          "description": "Absolute radiometric accuracy, or -99999 if derivation of this mandatory metadata value is not yet implemented.",
+          "title": "Absolute"
+        },
+        "relative": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/NotImplementedNumber"
+            }
+          ],
+          "description": "Relative radiometric accuracy, or -99999 if derivation of this mandatory metadata value is not yet implemented.",
+          "title": "Relative"
+        },
+        "reference": {
+          "title": "Reference",
+          "type": "string"
+        }
+      },
+      "required": [
+        "absolute",
+        "relative",
+        "reference"
+      ],
+      "title": "RadiometricAccuracyMetadata",
+      "type": "object"
+    },
+    "SourceMetadata": {
+      "additionalProperties": false,
+      "description": "Metadata describing one source product contributing to the ARD product.",
+      "properties": {
+        "filename": {
+          "title": "Filename",
+          "type": "string"
+        },
+        "product_type": {
+          "title": "Product Type",
+          "type": "string"
+        },
+        "data_geometry": {
+          "title": "Data Geometry",
+          "type": "string"
+        },
+        "acquisition_type": {
+          "title": "Acquisition Type",
+          "type": "string"
+        },
+        "status": {
+          "title": "Status",
+          "type": "string"
+        },
+        "access": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Access"
+        },
+        "doi": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Doi"
+        },
+        "time_start": {
+          "format": "date-time",
+          "title": "Time Start",
+          "type": "string"
+        },
+        "time_stop": {
+          "format": "date-time",
+          "title": "Time Stop",
+          "type": "string"
+        },
+        "geometry": {
+          "$ref": "#/$defs/GeometryMetadata"
+        },
+        "processing": {
+          "$ref": "#/$defs/ProcessingMetadata"
+        },
+        "orbit": {
+          "$ref": "#/$defs/SourceOrbitMetadata"
+        },
+        "swaths": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Swaths",
+          "type": "array"
+        },
+        "azimuth": {
+          "$ref": "#/$defs/SwathAxisMetadata"
+        },
+        "range": {
+          "$ref": "#/$defs/SwathAxisMetadata"
+        },
+        "incidence_angle": {
+          "$ref": "#/$defs/IncidenceAngleMetadata"
+        },
+        "instrument_azimuth_angle": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Instrument Azimuth Angle"
+        },
+        "lut_applied": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lut Applied"
+        },
+        "sensor_calibration": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sensor Calibration"
+        },
+        "polarimetric_calibration_matrices": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Polarimetric Calibration Matrices"
+        },
+        "faraday_mean_rotation_angle": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Faraday Mean Rotation Angle"
+        },
+        "faraday_rotation_reference": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Faraday Rotation Reference"
+        },
+        "ionosphere_indicator": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ionosphere Indicator"
+        },
+        "performance": {
+          "$ref": "#/$defs/SourcePerformanceMetadata"
+        }
+      },
+      "required": [
+        "filename",
+        "product_type",
+        "data_geometry",
+        "acquisition_type",
+        "status",
+        "time_start",
+        "time_stop",
+        "geometry",
+        "processing",
+        "orbit",
+        "swaths",
+        "azimuth",
+        "range",
+        "incidence_angle",
+        "performance"
+      ],
+      "title": "SourceMetadata",
+      "type": "object"
+    },
+    "SourceOrbitMetadata": {
+      "additionalProperties": false,
+      "description": "Orbit metadata specific to an input source scene.",
+      "properties": {
+        "ascending_node_date": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ascending Node Date"
+        },
+        "start_time_from_ascending_node": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Start Time From Ascending Node"
+        },
+        "completion_time_from_ascending_node": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Completion Time From Ascending Node"
+        },
+        "major_cycle_id": {
+          "minimum": 0,
+          "title": "Major Cycle Id",
+          "type": "integer"
+        },
+        "datatake_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Datatake Id"
+        },
+        "data_access": {
+          "title": "Data Access",
+          "type": "string"
+        },
+        "data_source": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Data Source"
+        },
+        "state_vector": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "State Vector"
+        }
+      },
+      "required": [
+        "major_cycle_id",
+        "data_access"
+      ],
+      "title": "SourceOrbitMetadata",
+      "type": "object"
+    },
+    "SourcePerformanceMetadata": {
+      "additionalProperties": false,
+      "description": "CARD4L source-product performance indicators.",
+      "properties": {
+        "noise_equivalent_intensity_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Noise Equivalent Intensity Type"
+        },
+        "estimates": {
+          "additionalProperties": {
+            "$ref": "#/$defs/PerformanceEstimate"
+          },
+          "propertyNames": {
+            "enum": [
+              "HH",
+              "HV",
+              "VH",
+              "VV"
+            ]
+          },
+          "title": "Estimates",
+          "type": "object"
+        },
+        "equivalent_number_of_looks": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Equivalent Number Of Looks"
+        },
+        "integrated_side_lobe_ratio": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Integrated Side Lobe Ratio"
+        },
+        "peak_side_lobe_ratio": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Peak Side Lobe Ratio"
+        }
+      },
+      "required": [
+        "estimates"
+      ],
+      "title": "SourcePerformanceMetadata",
+      "type": "object"
+    },
+    "SwathAxisMetadata": {
+      "additionalProperties": false,
+      "description": "Per-swath sampling and resolution metadata along one SAR image axis.",
+      "properties": {
+        "look_bandwidth": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "$ref": "#/$defs/NotImplementedNumber"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "description": "Look bandwidth per swath. -99999 denotes a mandatory value whose derivation is not yet implemented; None denotes genuinely unavailable/not-applicable source metadata.",
+          "title": "Look Bandwidth",
+          "type": "object"
+        },
+        "number_of_looks": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Number Of Looks",
+          "type": "object"
+        },
+        "pixel_spacing": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Pixel Spacing",
+          "type": "object"
+        },
+        "resolution": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Resolution",
+          "type": "object"
+        }
+      },
+      "required": [
+        "look_bandwidth",
+        "number_of_looks",
+        "pixel_spacing",
+        "resolution"
+      ],
+      "title": "SwathAxisMetadata",
+      "type": "object"
+    },
+    "WindNormalizationMetadata": {
+      "additionalProperties": false,
+      "description": "Optional wind-normalization metadata used by ocean radar backscatter.",
+      "properties": {
+        "backscatter_measurement": {
+          "title": "Backscatter Measurement",
+          "type": "string"
+        },
+        "backscatter_convention": {
+          "title": "Backscatter Convention",
+          "type": "string"
+        },
+        "reference_direction": {
+          "title": "Reference Direction",
+          "type": "number"
+        },
+        "reference_model": {
+          "title": "Reference Model",
+          "type": "string"
+        },
+        "reference_speed": {
+          "minimum": 0,
+          "title": "Reference Speed",
+          "type": "number"
+        },
+        "reference_type": {
+          "title": "Reference Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "backscatter_measurement",
+        "backscatter_convention",
+        "reference_direction",
+        "reference_model",
+        "reference_speed",
+        "reference_type"
+      ],
+      "title": "WindNormalizationMetadata",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Canonical metadata transfer object for CESARD STAC and XML writers.",
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "common": {
+      "$ref": "#/$defs/CommonMetadata"
+    },
+    "product": {
+      "$ref": "#/$defs/ProductMetadata"
+    },
+    "sources": {
+      "additionalProperties": {
+        "$ref": "#/$defs/SourceMetadata"
+      },
+      "minProperties": 1,
+      "title": "Sources",
+      "type": "object"
+    }
+  },
+  "required": [
+    "common",
+    "product",
+    "sources"
+  ],
+  "title": "CESARD ARD Metadata",
+  "type": "object"
+}
