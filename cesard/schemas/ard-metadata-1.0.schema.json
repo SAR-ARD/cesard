@@ -1353,6 +1353,7 @@
         },
         "number_of_looks": {
           "additionalProperties": {
+            "exclusiveMinimum": 0,
             "type": "number"
           },
           "title": "Number Of Looks",
@@ -1360,6 +1361,7 @@
         },
         "pixel_spacing": {
           "additionalProperties": {
+            "exclusiveMinimum": 0,
             "type": "number"
           },
           "title": "Pixel Spacing",
@@ -1367,6 +1369,7 @@
         },
         "resolution": {
           "additionalProperties": {
+            "exclusiveMinimum": 0,
             "type": "number"
           },
           "title": "Resolution",
