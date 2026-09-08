@@ -409,18 +409,22 @@ def product_json(
     sat_ext = SatExtension.ext(item, add_if_missing=True)
     proj_ext = ProjectionExtension.ext(item, add_if_missing=True)
     mgrs_ext = MgrsExtension.ext(item, add_if_missing=True)
+    ## add extensions that are not directly supported by pystac
     item.stac_extensions.append(
         'https://stac-extensions.github.io/processing/v1.1.0/schema.json'
     )
     item.stac_extensions.append(
         'https://stac-extensions.github.io/card4l/v0.1.0/sar/product.json'
     )
-    
+    ###############################################################################################
+    # sat extension
     sat_ext.apply(
         orbit_state=OrbitState[common.orbit_direction.upper()],
         relative_orbit=common.orbit_number_relative,
         absolute_orbit=common.orbit_number_absolute,
     )
+    ###############################################################################################
+    # sar extension
     sar_ext.apply(
         instrument_mode=common.operational_mode,
         frequency_band=FrequencyBand[common.radar_band.upper()],
@@ -430,7 +434,8 @@ def product_json(
         looks_azimuth=product.backscatter.azimuth_number_of_looks,
         looks_equivalent_number=product.backscatter.equivalent_number_of_looks,
     )
-    
+    ###############################################################################################
+    # projection extension
     native_bbox = product.geometry.bbox_native
     proj_ext.apply(
         epsg=product.grid.epsg,
@@ -440,17 +445,21 @@ def product_json(
         shape=[product.grid.rows, product.grid.columns],
         transform=list(product.grid.transform),
     )
+    ###############################################################################################
+    # mgrs extension
     mgrs_ext.apply(
         latitude_band=mgrs[2:3],
         grid_square=mgrs[3:],
         utm_zone=int(mgrs[:2]),
     )
-    
+    ###############################################################################################
+    # processing extension
     if product.processing.facility is not None:
         item.properties['processing:facility'] = product.processing.facility
     item.properties['processing:software'] = product.processing.software
     item.properties['processing:level'] = common.processing_level
-    
+    ###############################################################################################
+    # card4l extension
     item.properties['card4l:specification'] = product.card4l.specification
     item.properties['card4l:specification_version'] = product.card4l.version
     item.properties['card4l:beam_id'] = common.swath_identifier
@@ -478,8 +487,8 @@ def product_json(
         'stddev': accuracy.eastern.standard_deviation,
     }
     item.properties['card4l:geometric_accuracy_radial_rmse'] = accuracy.radial_rmse
-    
-    # Links
+    ###############################################################################################
+    # links
     links = [
         {
             'rel': 'card4l-document',
@@ -609,8 +618,8 @@ def product_json(
     for link in links:
         if link['target'] is not None:
             item.add_link(link=pystac.Link(**link))
-    
-    # Assets
+    ###############################################################################################
+    # assets
     assets = assets.copy()
     xml = outname.replace('.json', '.xml')
     if os.path.isfile(xml):
@@ -722,12 +731,13 @@ def product_json(
         for key in sorted(assets_dict[category]):
             item.add_asset(key=key, asset=assets_dict[category][key])
     
+    ## add schema URIs for extensions used in asset metadata
     if any(x in item.get_assets() for x in ['acquisition-id', 'data-mask']):
         ClassificationExtension.add_to(item)
     FileExtension.add_to(item)
     RasterExtension.add_to(item)
-    
-    # Downgrade extensions as required by CARD4L v0.1.0.
+    ###############################################################################################
+    # downgrade extensions as required by CARD4L v0.1.0.
     item.stac_extensions = [
         'https://stac-extensions.github.io/file/v2.0.0/schema.json'
         if ext.startswith('https://stac-extensions.github.io/file/')
@@ -736,7 +746,8 @@ def product_json(
         else ext
         for ext in item.stac_extensions
     ]
-    
+    ###############################################################################################
+    # validate and save
     item.validate()
     item.save_object(dest_href=outname)
 
