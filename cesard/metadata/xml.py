@@ -45,7 +45,7 @@ def _append_xml_field(
     }
     element = etree.SubElement(
         field.parent,
-        _nsc(field.name, dict(nsmap), ard_ns=ard_ns),
+        _nsc(field.name, nsmap, ard_ns=ard_ns),
         attrib=attributes,
     )
     if field.value is not None:
@@ -779,13 +779,13 @@ def product_xml(
 
 def _nsc(
         text: str,
-        nsmap: dict[str, str],
+        nsmap: Mapping[str, str],
         ard_ns: str | None = None
 ) -> str:
-    ns, key = text.split(':')
+    ns, key = text.split(':', maxsplit=1)
     if ard_ns is not None and ns == '_':
         ns = ard_ns
-    return '{{{0}}}{1}'.format(nsmap[ns], key)
+    return f'{{{nsmap[ns]}}}{key}'
 
 
 def _om_time(
