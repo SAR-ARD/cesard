@@ -296,7 +296,7 @@ class GridMetadata(MetadataModel):
     pixel_spacing_column: float = Field(gt=0)
     transform: AffineTransform
     mgrs_id: str
-    pixel_coordinate_convention: str
+    pixel_coordinate_convention: Literal["upper-left"]
     number_of_border_pixels: int = Field(ge=0)
 
 
