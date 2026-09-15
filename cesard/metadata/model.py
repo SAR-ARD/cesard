@@ -338,8 +338,8 @@ class ProductMetadata(MetadataModel):
     radiometric_accuracy: RadiometricAccuracyMetadata
     noise_removal: NoiseRemovalMetadata
     
-    ancillary_data_kml: str
-    gridding_convention_url: str
+    grid_definition_url: str
+    grid_convention_url: str
     rtc_algorithm: str | None = None
     
     number_of_acquisitions: int = Field(gt=0)
@@ -692,8 +692,8 @@ class ARDMetadata(MetadataModel):
                 applied=bool(product["noiseRemovalApplied"]),
                 algorithm=optional_text(product.get("noiseRemovalAlgorithm")),
             ),
-            ancillary_data_kml=product["ancillaryData_KML"],
-            gridding_convention_url=product["griddingConventionURL"],
+            grid_definition_url=product["grid_definition_url"],
+            grid_convention_url=product["grid_convention_url"],
             rtc_algorithm=optional_text(product.get("RTCAlgorithm")),
             number_of_acquisitions=int(product["numberOfAcquisitions"]),
             speckle_filter_applied=(
