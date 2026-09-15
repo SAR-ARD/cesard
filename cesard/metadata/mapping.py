@@ -92,13 +92,15 @@ ASSET_MAP = {
 }
 
 URL = {
-    'ancillaryData_KML': 'https://sentiwiki.copernicus.eu/__attachments/a_69a662aa1cb30487acc66009f09b1dcfa9e4e32f92af1c3b2dd1fc8a3c011738/'
-                         'S2A_OPER_GIP_TILPAR_MPC__20151209T095117_V20150622T000000_21000101T000000_B00.zip',
     'card4l_nrb': 'https://ceos.org/ard/files/PFS/NRB/v5.5/CARD4L-PFS_NRB_v5.5.pdf',
     'card4l_orb': 'https://ceos.org/ard/files/PFS/ORB/v1.0/'
                   'CARD4L_Product_Family_Specification_Ocean_Radar_Backscatter-v1.0.pdf',
     'egm2008': 'https://doi.org/10.1029/2011JB008916',
-    'griddingConventionURL': 'https://www.mgrs-data.org/data/documents/nga_mgrs_doc.pdf',
+    'grid_convention': 'https://www.mgrs-data.org/data/documents/nga_mgrs_doc.pdf',
+    'grid_definition':
+        'https://sentiwiki.copernicus.eu/__attachments/'
+        'a_69a662aa1cb30487acc66009f09b1dcfa9e4e32f92af1c3b2dd1fc8a3c011738/'
+        'S2A_OPER_GIP_TILPAR_MPC__20151209T095117_V20150622T000000_21000101T000000_B00.zip',
     'platformReference': {
         'envisat-1': 'https://database.eohandbook.com/database/missionsummary.aspx?missionID=2',
         'ers-1': 'https://database.eohandbook.com/database/missionsummary.aspx?missionID=220',
