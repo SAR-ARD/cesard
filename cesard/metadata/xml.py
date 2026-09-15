@@ -1,6 +1,7 @@
 import os
 import re
 from copy import deepcopy
+from dataclasses import dataclass
 from lxml import etree
 from datetime import datetime, timezone
 from spatialist import Raster
@@ -15,6 +16,41 @@ import logging
 log = logging.getLogger('cesard')
 
 MetadataInput = ARDMetadata | Mapping[str, Any]
+
+
+@dataclass(frozen=True, slots=True)
+class XmlField:
+    """Description of one ordered XML text element."""
+    
+    parent: etree._Element
+    name: str
+    value: object | None
+    attributes: Mapping[str, object] | None = None
+    omit_if_none: bool = False
+
+
+def _append_xml_field(
+        field: XmlField,
+        nsmap: Mapping[str, str],
+        ard_ns: str,
+) -> etree._Element | None:
+    """Append one XML element according to its absence policy."""
+    if field.value is None and field.omit_if_none:
+        return None
+    
+    attributes = {
+        name: str(value)
+        for name, value in (field.attributes or {}).items()
+        if value is not None
+    }
+    element = etree.SubElement(
+        field.parent,
+        _nsc(field.name, dict(nsmap), ard_ns=ard_ns),
+        attrib=attributes,
+    )
+    if field.value is not None:
+        element.text = str(field.value)
+    return element
 
 
 def _as_model(meta: MetadataInput) -> ARDMetadata:
@@ -159,82 +195,189 @@ def source_xml(
         status = etree.SubElement(earthObservationMetaData, _nsc('eop:status', nsmap))
         status.text = source.status
         
-        processing = etree.SubElement(earthObservationMetaData, _nsc('eop:processing', nsmap))
-        processingInformation = etree.SubElement(processing, _nsc('_:ProcessingInformation', nsmap, ard_ns=ard_ns))
+        processing = etree.SubElement(
+            earthObservationMetaData,
+            _nsc('eop:processing', nsmap)
+        )
+        processingInformation = etree.SubElement(
+            processing,
+            _nsc('_:ProcessingInformation', nsmap, ard_ns=ard_ns)
+        )
         
         fields = [
-            (processingInformation, 'eop:processingCenter',
-             {'codeSpace': 'urn:esa:eop:Sentinel1:facility'},
-             source.processing.facility),
-            (processingInformation, 'eop:processingDate', None,
-             source.processing.date.isoformat() if source.processing.date is not None else None),
-            (processingInformation, 'eop:processorName', None,
-             source.processing.processor),
-            (processingInformation, 'eop:processorVersion', None,
-             _processor_version(source.processing)),
-            (processingInformation, 'eop:processingMode', None,
-             source.processing.mode),
-            (processingInformation, '_:orbitDataSource', None,
-             source.orbit.data_source.upper() if source.orbit.data_source is not None else None),
-            (processingInformation, '_:orbitStateVector',
-             {'access': source.orbit.data_access}, source.orbit.state_vector),
-            (processingInformation, '_:lutApplied', None, source.lut_applied),
-            (earthObservationMetaData, '_:productType',
-             {'codeSpace': 'urn:esa:eop:Sentinel1:class'}, source.product_type),
-            (earthObservationMetaData, '_:dataGeometry', None, source.data_geometry),
-            (earthObservationMetaData, '_:azimuthPixelSpacing', {'uom': 'm'},
-             mean(source.azimuth.pixel_spacing.values())),
-            (earthObservationMetaData, '_:rangePixelSpacing', {'uom': 'm'},
-             mean(source.range.pixel_spacing.values())),
-            (earthObservationMetaData, '_:meanFaradayRotationAngle', {'uom': 'deg'},
-             source.faraday_mean_rotation_angle),
-            (earthObservationMetaData, '_:referenceFaradayRotation',
-             {_nsc('xlink:href', nsmap): str(source.faraday_rotation_reference)}, None),
-            (earthObservationMetaData, '_:ionosphereIndicator', None,
-             source.ionosphere_indicator),
+            XmlField(
+                parent=processingInformation,
+                name='eop:processingCenter',
+                attributes={
+                    'codeSpace': 'urn:esa:eop:Sentinel1:facility',
+                },
+                value=source.processing.facility,
+            ),
+            XmlField(
+                parent=processingInformation,
+                name='eop:processingDate',
+                value=(
+                    source.processing.date.isoformat()
+                    if source.processing.date is not None
+                    else None
+                ),
+            ),
+            XmlField(
+                parent=processingInformation,
+                name='eop:processorName',
+                value=source.processing.processor,
+            ),
+            XmlField(
+                parent=processingInformation,
+                name='eop:processorVersion',
+                value=_processor_version(source.processing),
+            ),
+            XmlField(
+                parent=processingInformation,
+                name='eop:processingMode',
+                value=source.processing.mode,
+            ),
+            XmlField(
+                parent=processingInformation,
+                name='_:orbitDataSource',
+                value=(
+                    source.orbit.data_source.upper()
+                    if source.orbit.data_source is not None
+                    else None
+                ),
+            ),
+            XmlField(
+                parent=processingInformation,
+                name='_:orbitStateVector',
+                attributes={'access': source.orbit.data_access},
+                value=source.orbit.state_vector,
+                omit_if_none=True,
+            ),
+            XmlField(
+                parent=processingInformation,
+                name='_:lutApplied',
+                value=source.lut_applied,
+            ),
+            XmlField(
+                parent=earthObservationMetaData,
+                name='_:productType',
+                attributes={
+                    'codeSpace': 'urn:esa:eop:Sentinel1:class',
+                },
+                value=source.product_type,
+            ),
+            XmlField(
+                parent=earthObservationMetaData,
+                name='_:dataGeometry',
+                value=source.data_geometry,
+            ),
+            XmlField(
+                parent=earthObservationMetaData,
+                name='_:azimuthPixelSpacing',
+                attributes={'uom': 'm'},
+                value=mean(source.azimuth.pixel_spacing.values()),
+            ),
+            XmlField(
+                parent=earthObservationMetaData,
+                name='_:rangePixelSpacing',
+                attributes={'uom': 'm'},
+                value=mean(source.range.pixel_spacing.values()),
+            ),
+            XmlField(
+                parent=earthObservationMetaData,
+                name='_:meanFaradayRotationAngle',
+                attributes={'uom': 'deg'},
+                value=source.faraday_mean_rotation_angle,
+            ),
+            XmlField(
+                parent=earthObservationMetaData,
+                name='_:referenceFaradayRotation',
+                attributes={
+                    _nsc('xlink:href', nsmap):
+                        source.faraday_rotation_reference,
+                },
+                value=None,
+            ),
+            XmlField(
+                parent=earthObservationMetaData,
+                name='_:ionosphereIndicator',
+                value=source.ionosphere_indicator,
+            ),
         ]
         
-        for parent, field_dst, attrib, value in fields:
-            element = etree.SubElement(
-                _parent=parent,
-                _tag=_nsc(text=field_dst, nsmap=nsmap, ard_ns=ard_ns),
-                attrib=attrib,
+        for field in fields:
+            _append_xml_field(
+                field=field,
+                nsmap=nsmap,
+                ard_ns=ard_ns,
             )
-            if value is not None:
-                element.text = str(value)
         
-        processingLevel = etree.SubElement(processingInformation, _nsc('_:processingLevel', nsmap, ard_ns=ard_ns))
+        processingLevel = etree.SubElement(
+            processingInformation,
+            _nsc('_:processingLevel', nsmap, ard_ns=ard_ns)
+        )
         processingLevel.text = meta.common.processing_level
         
         for swath in source.swaths:
             fields = [
-                (processingInformation, 'azimuthLookBandwidth', {'uom': 'Hz', 'beam': swath},
-                 source.azimuth.look_bandwidth[swath]),
-                (processingInformation, 'rangeLookBandwidth', {'uom': 'Hz', 'beam': swath},
-                 source.range.look_bandwidth[swath]),
-                (earthObservationMetaData, 'azimuthNumberOfLooks', {'beam': swath},
-                 source.azimuth.number_of_looks[swath]),
-                (earthObservationMetaData, 'rangeNumberOfLooks', {'beam': swath},
-                 source.range.number_of_looks[swath]),
-                (earthObservationMetaData, 'azimuthResolution', {'uom': 'm', 'beam': swath},
-                 source.azimuth.resolution[swath]),
-                (earthObservationMetaData, 'rangeResolution', {'uom': 'm', 'beam': swath},
-                 source.range.resolution[swath]),
+                XmlField(
+                    parent=processingInformation,
+                    name='_:azimuthLookBandwidth',
+                    attributes={'uom': 'Hz', 'beam': swath},
+                    value=source.azimuth.look_bandwidth[swath],
+                ),
+                XmlField(
+                    parent=processingInformation,
+                    name='_:rangeLookBandwidth',
+                    attributes={'uom': 'Hz', 'beam': swath},
+                    value=source.range.look_bandwidth[swath],
+                ),
+                XmlField(
+                    parent=earthObservationMetaData,
+                    name='_:azimuthNumberOfLooks',
+                    attributes={'beam': swath},
+                    value=source.azimuth.number_of_looks[swath],
+                ),
+                XmlField(
+                    parent=earthObservationMetaData,
+                    name='_:rangeNumberOfLooks',
+                    attributes={'beam': swath},
+                    value=source.range.number_of_looks[swath],
+                ),
+                XmlField(
+                    parent=earthObservationMetaData,
+                    name='_:azimuthResolution',
+                    attributes={'uom': 'm', 'beam': swath},
+                    value=source.azimuth.resolution[swath],
+                ),
+                XmlField(
+                    parent=earthObservationMetaData,
+                    name='_:rangeResolution',
+                    attributes={'uom': 'm', 'beam': swath},
+                    value=source.range.resolution[swath],
+                ),
             ]
             
-            for parent, key, attrib, value in fields:
-                element = etree.SubElement(
-                    _parent=parent,
-                    _tag=_nsc(f'_:{key}', nsmap, ard_ns=ard_ns),
-                    attrib=attrib,
+            for field in fields:
+                _append_xml_field(
+                    field=field,
+                    nsmap=nsmap,
+                    ard_ns=ard_ns,
                 )
-                element.text = str(value)
         
-        performance = etree.SubElement(earthObservationMetaData, _nsc('_:performance', nsmap, ard_ns=ard_ns))
-        performanceIndicators = etree.SubElement(performance, _nsc('_:PerformanceIndicators', nsmap, ard_ns=ard_ns))
-        noiseEquivalentIntensityType = etree.SubElement(performanceIndicators,
-                                                        _nsc('_:noiseEquivalentIntensityType', nsmap, ard_ns=ard_ns),
-                                                        attrib={'uom': 'dB'})
+        performance = etree.SubElement(
+            earthObservationMetaData,
+            _nsc('_:performance', nsmap, ard_ns=ard_ns)
+        )
+        performanceIndicators = etree.SubElement(
+            performance,
+            _nsc('_:PerformanceIndicators', nsmap, ard_ns=ard_ns)
+        )
+        noiseEquivalentIntensityType = etree.SubElement(
+            performanceIndicators,
+            _nsc('_:noiseEquivalentIntensityType', nsmap, ard_ns=ard_ns),
+            attrib={'uom': 'dB'}
+        )
         noiseEquivalentIntensityType.text = str(source.performance.noise_equivalent_intensity_type)
         
         for pol in meta.common.polarizations:
