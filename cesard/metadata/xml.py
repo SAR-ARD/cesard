@@ -24,7 +24,7 @@ class XmlField:
     
     parent: etree._Element
     name: str
-    value: object | None
+    value: object | None = None
     attributes: Mapping[str, object] | None = None
     omit_if_none: bool = False
 
@@ -296,7 +296,6 @@ def source_xml(
                     _nsc('xlink:href', nsmap):
                         source.faraday_rotation_reference,
                 },
-                value=None,
             ),
             XmlField(
                 parent=earthObservationMetaData,
@@ -383,29 +382,35 @@ def source_xml(
         for pol in meta.common.polarizations:
             perf = source.performance.estimates[pol]
             for stat in ['minimum', 'mean', 'maximum']:
-                estimate = etree.SubElement(
-                    _parent=performanceIndicators,
-                    _tag=_nsc('_:estimates', nsmap, ard_ns=ard_ns),
-                    attrib={'pol': pol, 'type': stat},
+                _append_xml_field(
+                    field=XmlField(
+                        parent=performanceIndicators,
+                        name='_:estimates',
+                        attributes={'pol': pol, 'type': stat},
+                        value=getattr(perf, stat),
+                    ),
+                    nsmap=nsmap,
+                    ard_ns=ard_ns,
                 )
-                estimate.text = str(getattr(perf, stat))
         
         fields = [
-            (performanceIndicators, '_:equivalentNumberOfLooks',
+            ('_:equivalentNumberOfLooks',
              source.performance.equivalent_number_of_looks),
-            (performanceIndicators, '_:peakSideLobeRatio',
+            ('_:peakSideLobeRatio',
              source.performance.peak_side_lobe_ratio),
-            (performanceIndicators, '_:integratedSideLobeRatio',
+            ('_:integratedSideLobeRatio',
              source.performance.integrated_side_lobe_ratio),
         ]
         
-        for parent, field_dst, value in fields:
-            element = etree.SubElement(parent, _nsc(field_dst, nsmap, ard_ns=ard_ns))
+        for field_dst, value in fields:
+            element = etree.SubElement(performanceIndicators, _nsc(field_dst, nsmap, ard_ns=ard_ns))
             element.text = str(value)
         
-        polCalMatrices = etree.SubElement(earthObservationMetaData, _nsc('_:polCalMatrices', nsmap, ard_ns=ard_ns),
-                                          attrib={
-                                              _nsc('xlink:href', nsmap): str(source.polarimetric_calibration_matrices)})
+        polCalMatrices = etree.SubElement(
+            earthObservationMetaData,
+            _nsc('_:polCalMatrices', nsmap, ard_ns=ard_ns),
+            attrib={_nsc('xlink:href', nsmap): str(source.polarimetric_calibration_matrices)}
+        )
         ################################################################################################################
         etree.indent(root)
         tree = etree.ElementTree(root)
