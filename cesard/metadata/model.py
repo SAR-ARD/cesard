@@ -298,6 +298,8 @@ class GridMetadata(MetadataModel):
     mgrs_id: str
     pixel_coordinate_convention: Literal["upper-left"]
     number_of_border_pixels: int = Field(ge=0)
+    definition_reference: str
+    convention_reference: str
 
 
 class WindNormalizationMetadata(MetadataModel):
@@ -338,8 +340,6 @@ class ProductMetadata(MetadataModel):
     radiometric_accuracy: RadiometricAccuracyMetadata
     noise_removal: NoiseRemovalMetadata
     
-    grid_definition_url: str
-    grid_convention_url: str
     rtc_algorithm: str | None = None
     
     number_of_acquisitions: int = Field(gt=0)
@@ -622,6 +622,8 @@ class ARDMetadata(MetadataModel):
                 mgrs_id=product["mgrsID"],
                 pixel_coordinate_convention=product["pixelCoordinateConvention"],
                 number_of_border_pixels=int(product["numBorderPixels"]),
+                definition_reference=product["grid_definition_url"],
+                convention_reference=product["grid_convention_url"],
             ),
             processing=ProcessingMetadata(
                 facility=optional_text(product.get("processingCenter")),
@@ -692,8 +694,6 @@ class ARDMetadata(MetadataModel):
                 applied=bool(product["noiseRemovalApplied"]),
                 algorithm=optional_text(product.get("noiseRemovalAlgorithm")),
             ),
-            grid_definition_url=product["grid_definition_url"],
-            grid_convention_url=product["grid_convention_url"],
             rtc_algorithm=optional_text(product.get("RTCAlgorithm")),
             number_of_acquisitions=int(product["numberOfAcquisitions"]),
             speckle_filter_applied=(

@@ -521,6 +521,7 @@
           "type": "string"
         },
         "pixel_coordinate_convention": {
+          "const": "upper-left",
           "title": "Pixel Coordinate Convention",
           "type": "string"
         },
@@ -528,6 +529,14 @@
           "minimum": 0,
           "title": "Number Of Border Pixels",
           "type": "integer"
+        },
+        "definition_reference": {
+          "title": "Definition Reference",
+          "type": "string"
+        },
+        "convention_reference": {
+          "title": "Convention Reference",
+          "type": "string"
         }
       },
       "required": [
@@ -540,7 +549,9 @@
         "transform",
         "mgrs_id",
         "pixel_coordinate_convention",
-        "number_of_border_pixels"
+        "number_of_border_pixels",
+        "definition_reference",
+        "convention_reference"
       ],
       "title": "GridMetadata",
       "type": "object"
@@ -835,14 +846,6 @@
         "noise_removal": {
           "$ref": "#/$defs/NoiseRemovalMetadata"
         },
-        "ancillary_data_kml": {
-          "title": "Ancillary Data Kml",
-          "type": "string"
-        },
-        "gridding_convention_url": {
-          "title": "Gridding Convention Url",
-          "type": "string"
-        },
         "rtc_algorithm": {
           "anyOf": [
             {
@@ -914,8 +917,6 @@
         "geometric_correction",
         "radiometric_accuracy",
         "noise_removal",
-        "ancillary_data_kml",
-        "gridding_convention_url",
         "number_of_acquisitions"
       ],
       "title": "ProductMetadata",
@@ -1331,7 +1332,7 @@
     },
     "SwathAxisMetadata": {
       "additionalProperties": false,
-      "description": "Per-swath sampling and resolution metadata along one SAR image axis.",
+      "description": "Sampling and resolution metadata along one SAR image axis.",
       "properties": {
         "look_bandwidth": {
           "additionalProperties": {
