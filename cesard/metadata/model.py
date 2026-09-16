@@ -25,8 +25,6 @@ from pydantic import (
 
 BBox = tuple[float, float, float, float]
 AffineTransform = tuple[float, float, float, float, float, float]
-OrbitDirection = Literal["ascending", "descending"]
-AntennaLookDirection = Literal["LEFT", "RIGHT"]
 Polarization = Literal["HH", "HV", "VH", "VV"]
 PositiveFloat = Annotated[float, Field(gt=0)]
 
@@ -123,7 +121,7 @@ class ProcessingMetadata(MetadataModel):
     
     facility: str | None = None
     date: AwareDatetime | None = None
-    mode: str | None = None
+    mode: Literal["PROTOTYPE", "NOMINAL"]
     processor: str | None = None
     software: dict[str, str] = Field(default_factory=dict)
     
@@ -139,11 +137,11 @@ class ProcessingMetadata(MetadataModel):
 class CommonMetadata(MetadataModel):
     """Metadata shared by the ARD product and all contributing source scenes."""
     
-    antenna_look_direction: AntennaLookDirection
+    antenna_look_direction: Literal["LEFT", "RIGHT"]
     constellation: str
     instrument_short_name: str
     operational_mode: str
-    orbit_direction: OrbitDirection
+    orbit_direction: Literal["ascending", "descending"]
     orbit_mean_altitude: float = Field(gt=0)
     orbit_number_absolute: int = Field(ge=0)
     orbit_number_relative: int = Field(ge=0)
@@ -153,10 +151,10 @@ class CommonMetadata(MetadataModel):
     platform_short_name: str
     polarizations: tuple[Polarization, ...] = Field(min_length=1)
     polarization_mode: str
-    processing_level: str
-    radar_band: str
+    processing_level: Literal["L1C"]
+    radar_band: Literal["X", "C", "L"]
     radar_center_frequency: float = Field(gt=0)
-    sensor_type: str
+    sensor_type: Literal["RADAR"]
     swath_identifier: str
     wrs_longitude_grid: int = Field(ge=0)
 
@@ -164,7 +162,7 @@ class CommonMetadata(MetadataModel):
 class Card4lMetadata(MetadataModel):
     """Reference to the applicable CARD4L product-family specification."""
     
-    specification: str
+    specification: Literal["NRB", "ORB"]
     version: str
     document: str
 
@@ -180,14 +178,14 @@ class GroundSamplingDistance(MetadataModel):
     """Ground sampling distance with an explicit unit."""
     
     value: float = Field(gt=0)
-    unit: str = "m"
+    unit: Literal["m"] = "m"
 
 
 class DEMMetadata(MetadataModel):
     """Digital elevation model and Earth gravitational model metadata."""
     
     name: str
-    type: str
+    type: Literal["surface", "elevation"]
     reference: str
     access: str
     gsd: GroundSamplingDistance
@@ -220,7 +218,7 @@ class AxisAccuracy(MetadataModel):
 class GeometricAccuracyMetadata(MetadataModel):
     """Horizontal geolocation accuracy metadata."""
     
-    type: str
+    type: Literal["gtc", "slant-range"]
     eastern: AxisAccuracy
     northern: AxisAccuracy
     radial_rmse: NonNegativeNumberOrNotImplemented = Field(
@@ -277,9 +275,9 @@ class NoiseRemovalMetadata(MetadataModel):
 class BackscatterMetadata(MetadataModel):
     """Backscatter measurement representation and multilooking metadata."""
     
-    measurement: str
-    convention: str
-    conversion_equation: str
+    measurement: Literal['sigma0', 'gamma0']
+    convention: Literal['linear power']
+    conversion_equation: Literal['10*log10(DN)']
     range_number_of_looks: float = Field(gt=0)
     azimuth_number_of_looks: float = Field(gt=0)
     equivalent_number_of_looks: float | None = Field(default=None, gt=0)
@@ -305,21 +303,24 @@ class GridMetadata(MetadataModel):
 class WindNormalizationMetadata(MetadataModel):
     """Optional wind-normalization metadata used by ocean radar backscatter."""
     
-    backscatter_measurement: str
-    backscatter_convention: str
-    reference_direction: float
-    reference_model: str
-    reference_speed: float = Field(ge=0)
-    reference_type: str
+    backscatter_measurement: Literal["sigma0"] | None
+    backscatter_convention: Literal["intensity ratio"] | None
+    reference_direction: float | None
+    reference_model: str | None
+    reference_speed: float | None = Field(ge=0)
+    reference_type: Literal["sigma0-ref"] | None
 
 
 class ProductMetadata(MetadataModel):
     """Metadata describing the generated ARD product."""
     
-    name: str
-    product_type: str
-    acquisition_type: str
-    status: str
+    name: Literal["Normalised Radar Backscatter", "Ocean Radar Backscatter"]
+    product_type: Literal["NRB", "ORB"]
+    acquisition_type: Literal["NOMINAL", "CALIBRATION", "OTHER"]
+    status: Literal[
+        "ARCHIVED", "ACQUIRED", "CANCELLED", "FAILED", "PLANNED",
+        "POTENTIAL", "REJECTED", "QUALITYDEGRADED"
+    ]
     
     access: str | None = None
     doi: str | None = None
@@ -343,7 +344,7 @@ class ProductMetadata(MetadataModel):
     rtc_algorithm: str | None = None
     
     number_of_acquisitions: int = Field(gt=0)
-    speckle_filter_applied: bool | None = None
+    speckle_filter_applied: bool = False
     ellipsoidal_height: float | None = None
     wind_normalization: WindNormalizationMetadata | None = None
     
@@ -396,7 +397,7 @@ class PerformanceEstimate(MetadataModel):
 class SourcePerformanceMetadata(MetadataModel):
     """CARD4L source-product performance indicators."""
     
-    noise_equivalent_intensity_type: str | None = None
+    noise_equivalent_intensity_type: Literal['sigma0'] | None = None
     estimates: dict[Polarization, PerformanceEstimate]
     equivalent_number_of_looks: float | None = Field(default=None, gt=0)
     integrated_side_lobe_ratio: float | None = None
@@ -422,8 +423,11 @@ class SourceMetadata(MetadataModel):
     filename: str
     product_type: str
     data_geometry: str
-    acquisition_type: str
-    status: str
+    acquisition_type: Literal["NOMINAL", "CALIBRATION", "OTHER"]
+    status: Literal[
+        "ARCHIVED", "ACQUIRED", "CANCELLED", "FAILED", "PLANNED",
+        "POTENTIAL", "REJECTED", "QUALITYDEGRADED"
+    ]
     
     access: str | None = None
     doi: str | None = None
@@ -628,7 +632,7 @@ class ARDMetadata(MetadataModel):
             processing=ProcessingMetadata(
                 facility=optional_text(product.get("processingCenter")),
                 date=aware(product["timeCreated"]),
-                mode=optional_text(product.get("processingMode")),
+                mode=product.get("processingMode"),
                 processor=optional_text(product.get("processorName")),
                 software={str(k): str(v) for k, v in (product.get("processorVersion") or {}).items()},
             ),
@@ -639,10 +643,7 @@ class ARDMetadata(MetadataModel):
             ),
             compression=CompressionMetadata(
                 type=product["compression_type"],
-                z_errors={
-                    str(k): float(v)
-                    for k, v in product["compression_zerrors"].items()
-                },
+                z_errors=product["compression_zerrors"],
             ),
             dem=DEMMetadata(
                 name=product["demName"],

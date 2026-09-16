@@ -43,14 +43,20 @@
       "description": "Backscatter measurement representation and multilooking metadata.",
       "properties": {
         "measurement": {
+          "enum": [
+            "sigma0",
+            "gamma0"
+          ],
           "title": "Measurement",
           "type": "string"
         },
         "convention": {
+          "const": "linear power",
           "title": "Convention",
           "type": "string"
         },
         "conversion_equation": {
+          "const": "10*log10(DN)",
           "title": "Conversion Equation",
           "type": "string"
         },
@@ -93,6 +99,10 @@
       "description": "Reference to the applicable CARD4L product-family specification.",
       "properties": {
         "specification": {
+          "enum": [
+            "NRB",
+            "ORB"
+          ],
           "title": "Specification",
           "type": "string"
         },
@@ -195,10 +205,16 @@
           "type": "string"
         },
         "processing_level": {
+          "const": "L1C",
           "title": "Processing Level",
           "type": "string"
         },
         "radar_band": {
+          "enum": [
+            "X",
+            "C",
+            "L"
+          ],
           "title": "Radar Band",
           "type": "string"
         },
@@ -208,6 +224,7 @@
           "type": "number"
         },
         "sensor_type": {
+          "const": "RADAR",
           "title": "Sensor Type",
           "type": "string"
         },
@@ -278,6 +295,10 @@
           "type": "string"
         },
         "type": {
+          "enum": [
+            "surface",
+            "elevation"
+          ],
           "title": "Type",
           "type": "string"
         },
@@ -323,6 +344,10 @@
       "description": "Horizontal geolocation accuracy metadata.",
       "properties": {
         "type": {
+          "enum": [
+            "gtc",
+            "slant-range"
+          ],
           "title": "Type",
           "type": "string"
         },
@@ -566,6 +591,7 @@
           "type": "number"
         },
         "unit": {
+          "const": "m",
           "default": "m",
           "title": "Unit",
           "type": "string"
@@ -711,16 +737,12 @@
           "title": "Date"
         },
         "mode": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
+          "enum": [
+            "PROTOTYPE",
+            "NOMINAL"
           ],
-          "default": null,
-          "title": "Mode"
+          "title": "Mode",
+          "type": "string"
         },
         "processor": {
           "anyOf": [
@@ -742,6 +764,9 @@
           "type": "object"
         }
       },
+      "required": [
+        "mode"
+      ],
       "title": "ProcessingMetadata",
       "type": "object"
     },
@@ -750,18 +775,41 @@
       "description": "Metadata describing the generated ARD product.",
       "properties": {
         "name": {
+          "enum": [
+            "Normalised Radar Backscatter",
+            "Ocean Radar Backscatter"
+          ],
           "title": "Name",
           "type": "string"
         },
         "product_type": {
+          "enum": [
+            "NRB",
+            "ORB"
+          ],
           "title": "Product Type",
           "type": "string"
         },
         "acquisition_type": {
+          "enum": [
+            "NOMINAL",
+            "CALIBRATION",
+            "OTHER"
+          ],
           "title": "Acquisition Type",
           "type": "string"
         },
         "status": {
+          "enum": [
+            "ARCHIVED",
+            "ACQUIRED",
+            "CANCELLED",
+            "FAILED",
+            "PLANNED",
+            "POTENTIAL",
+            "REJECTED",
+            "QUALITYDEGRADED"
+          ],
           "title": "Status",
           "type": "string"
         },
@@ -864,16 +912,9 @@
           "type": "integer"
         },
         "speckle_filter_applied": {
-          "anyOf": [
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Speckle Filter Applied"
+          "default": false,
+          "title": "Speckle Filter Applied",
+          "type": "boolean"
         },
         "ellipsoidal_height": {
           "anyOf": [
@@ -980,10 +1021,25 @@
           "type": "string"
         },
         "acquisition_type": {
+          "enum": [
+            "NOMINAL",
+            "CALIBRATION",
+            "OTHER"
+          ],
           "title": "Acquisition Type",
           "type": "string"
         },
         "status": {
+          "enum": [
+            "ARCHIVED",
+            "ACQUIRED",
+            "CANCELLED",
+            "FAILED",
+            "PLANNED",
+            "POTENTIAL",
+            "REJECTED",
+            "QUALITYDEGRADED"
+          ],
           "title": "Status",
           "type": "string"
         },
@@ -1256,6 +1312,7 @@
         "noise_equivalent_intensity_type": {
           "anyOf": [
             {
+              "const": "sigma0",
               "type": "string"
             },
             {
@@ -1385,29 +1442,74 @@
       "description": "Optional wind-normalization metadata used by ocean radar backscatter.",
       "properties": {
         "backscatter_measurement": {
-          "title": "Backscatter Measurement",
-          "type": "string"
+          "anyOf": [
+            {
+              "const": "sigma0",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Backscatter Measurement"
         },
         "backscatter_convention": {
-          "title": "Backscatter Convention",
-          "type": "string"
+          "anyOf": [
+            {
+              "const": "intensity ratio",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Backscatter Convention"
         },
         "reference_direction": {
-          "title": "Reference Direction",
-          "type": "number"
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reference Direction"
         },
         "reference_model": {
-          "title": "Reference Model",
-          "type": "string"
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reference Model"
         },
         "reference_speed": {
-          "minimum": 0,
-          "title": "Reference Speed",
-          "type": "number"
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reference Speed"
         },
         "reference_type": {
-          "title": "Reference Type",
-          "type": "string"
+          "anyOf": [
+            {
+              "const": "sigma0-ref",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reference Type"
         }
       },
       "required": [
