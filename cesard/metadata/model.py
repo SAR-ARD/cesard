@@ -445,7 +445,7 @@ class SourceMetadata(MetadataModel):
     polarimetric_calibration_matrices: str | None = None
     faraday_mean_rotation_angle: float | None = None
     faraday_rotation_reference: str | None = None
-    ionosphere_indicator: str | bool | float | None = None
+    ionosphere_indicator: bool | None = None
     
     performance: SourcePerformanceMetadata
     

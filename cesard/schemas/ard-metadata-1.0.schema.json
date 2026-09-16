@@ -1122,13 +1122,7 @@
         "ionosphere_indicator": {
           "anyOf": [
             {
-              "type": "string"
-            },
-            {
               "type": "boolean"
-            },
-            {
-              "type": "number"
             },
             {
               "type": "null"
