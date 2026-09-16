@@ -1204,7 +1204,7 @@
         "datatake_id": {
           "anyOf": [
             {
-              "type": "string"
+              "type": "integer"
             },
             {
               "type": "null"

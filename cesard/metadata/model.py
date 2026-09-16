@@ -410,7 +410,7 @@ class SourceOrbitMetadata(MetadataModel):
     start_time_from_ascending_node: float | None = None
     completion_time_from_ascending_node: float | None = None
     major_cycle_id: int = Field(ge=0)
-    datatake_id: str | None = None
+    datatake_id: int | None = None
     data_access: str
     data_source: str | None = None
     state_vector: str | None = None
@@ -748,7 +748,7 @@ class ARDMetadata(MetadataModel):
                         source.get("timeCompletionFromAscendingNode")
                     ),
                     major_cycle_id=int(source["majorCycleID"]),
-                    datatake_id=optional_text(source.get("datatakeID")),
+                    datatake_id=source.get("datatakeID"),
                     data_access=source["orbitDataAccess"],
                     data_source=optional_text(source.get("orbitDataSource")),
                     state_vector=optional_text(source.get("orbitStateVector")),
