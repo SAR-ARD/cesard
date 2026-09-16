@@ -224,15 +224,6 @@ def source_json(
         links = [
             {
                 'rel': 'card4l-document',
-                'target': product.card4l.document.replace('.pdf', '.docx'),
-                'media_type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                'title': (
-                    'CARD4L Product Family Specification: '
-                    f'{product.name} (v{product.card4l.version})'
-                ),
-            },
-            {
-                'rel': 'card4l-document',
                 'target': product.card4l.document,
                 'media_type': 'application/pdf',
                 'title': (
