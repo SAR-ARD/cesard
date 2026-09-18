@@ -419,7 +419,7 @@ def get_kml() -> str:
     -------
         the path to the KML file
     """
-    remote = URL['ancillaryData_KML']
+    remote = URL['grid_definition']
     local_path = os.path.join(os.path.expanduser('~'), '.cesard')
     os.makedirs(local_path, exist_ok=True)
     local = os.path.join(local_path, os.path.basename(remote).replace('.zip', '.kml'))

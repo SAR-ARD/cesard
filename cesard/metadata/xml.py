@@ -622,7 +622,7 @@ def product_xml(
         sourceProduct = etree.SubElement(processingInformation, _nsc('_:sourceProduct', nsmap, ard_ns=ard_ns),
                                          attrib={_nsc('xlink:href', nsmap): src_target})
     auxData1 = etree.SubElement(processingInformation, _nsc('_:auxiliaryDataSetFileName', nsmap, ard_ns=ard_ns),
-                                attrib={_nsc('xlink:href', nsmap): meta.product.ancillary_data_kml})
+                                attrib={_nsc('xlink:href', nsmap): meta.product.grid.definition_reference})
     speckleFilterApplied = etree.SubElement(processingInformation, _nsc('_:speckleFilterApplied', nsmap,
                                                                         ard_ns=ard_ns))
     speckleFilterApplied.text = str(meta.product.speckle_filter_applied).lower()
@@ -757,7 +757,7 @@ def product_xml(
     griddingConvention = etree.SubElement(_parent=earthObservationMetaData,
                                           _tag=_nsc('_:griddingConvention', nsmap, ard_ns=ard_ns),
                                           attrib={_nsc('xlink:href', nsmap):
-                                                      meta.product.gridding_convention_url})
+                                                      meta.product.grid.convention_reference})
     
     lookup = [
         ('mgrsID', meta.product.grid.mgrs_id, None),

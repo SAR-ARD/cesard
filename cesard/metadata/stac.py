@@ -513,7 +513,7 @@ def product_json(
         },
         {
             'rel': 'related',
-            'target': product.ancillary_data_kml,
+            'target': product.grid.definition_reference,
             'title': (
                 'Sentinel-2 Military Grid Reference System (MGRS) tiling '
                 'grid file used as auxiliary data during processing'
@@ -578,7 +578,7 @@ def product_json(
         },
         {
             'rel': 'gridding-convention',
-            'target': product.gridding_convention_url,
+            'target': product.grid.convention_reference,
             'title': 'Reference describing the gridding convention used',
             'media_type': None,
         },
@@ -739,6 +739,7 @@ def product_json(
     ]
     ###############################################################################################
     # validate and save
+    log.debug('STAC validation')
     item.validate()
     item.save_object(dest_href=outname)
 
