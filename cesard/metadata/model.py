@@ -332,7 +332,7 @@ class ProductMetadata(MetadataModel):
     rtc_algorithm: ARDText | None = None
     
     number_of_acquisitions: int = Field(gt=0)
-    speckle_filter_applied: bool = False
+    speckle_filter_applied: SpeckleFilterMetadata | None
     ellipsoidal_height: ARDNumber | None = None
     wind_normalization: WindNormalizationMetadata | None = None
     
@@ -354,6 +354,13 @@ class SwathAxisMetadata(MetadataModel):
     number_of_looks: dict[str, PositiveFloat]
     pixel_spacing: dict[str, PositiveFloat]
     resolution: dict[str, PositiveFloat]
+
+
+class SpeckleFilterMetadata(MetadataModel):
+    model_config = ConfigDict(extra='allow')
+    type: str
+    window_size_col: str
+    window_size_line: str
 
 
 class IncidenceAngleMetadata(MetadataModel):
