@@ -10,9 +10,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Annotated, Any, Literal, Mapping
-
-from typing_extensions import TypeAliasType
+from typing import Any, Literal, Mapping
 
 from pydantic import (
     AwareDatetime,
@@ -21,12 +19,15 @@ from pydantic import (
     Field,
     field_validator,
     model_validator,
+    NonNegativeFloat,
+    NonNegativeInt,
+    PositiveFloat,
+    PositiveInt,
 )
 
 BBox = tuple[float, float, float, float]
 AffineTransform = tuple[float, float, float, float, float, float]
 Polarization = Literal["HH", "HV", "VH", "VV"]
-PositiveFloat = Annotated[float, Field(gt=0)]
 
 # Reserved values for mandatory metadata whose derivation is not yet
 # implemented. These are valid interface values and are intentionally kept
@@ -35,19 +36,18 @@ PositiveFloat = Annotated[float, Field(gt=0)]
 NOT_IMPLEMENTED_NUMBER = -99999
 NOT_IMPLEMENTED_TEXT = "TBD"
 
-NotImplementedNumber = TypeAliasType(
-    "NotImplementedNumber",
-    Literal[-99999],
-)
-NotImplementedText = TypeAliasType(
-    "NotImplementedText",
-    Literal["TBD"],
-)
-NumberOrNotImplemented = float | NotImplementedNumber
-NonNegativeNumberOrNotImplemented = (
-        Annotated[float, Field(ge=0)] | NotImplementedNumber
-)
-TextOrNotImplemented = str | NotImplementedText
+type NotImplementedNumber = Literal[-99999]
+type NotImplementedText = Literal["TBD"]
+
+type ARDNumber = float | NotImplementedNumber
+type ARDPositiveNumber = PositiveFloat | NotImplementedNumber
+type ARDNonNegativeNumber = NonNegativeFloat | NotImplementedNumber
+
+type ARDInteger = int | NotImplementedNumber
+type ARDPositiveInteger = PositiveInt | NotImplementedNumber
+type ARDNonNegativeInteger = NonNegativeInt | NotImplementedNumber
+
+type ARDText = str | NotImplementedText
 
 
 class MetadataModel(BaseModel):
@@ -119,10 +119,10 @@ class GeometryMetadata(MetadataModel):
 class ProcessingMetadata(MetadataModel):
     """Information about the processor that created a product or source scene."""
     
-    facility: str | None = None
+    facility: ARDText | None = None
     date: AwareDatetime | None = None
     mode: Literal["PROTOTYPE", "NOMINAL"]
-    processor: str | None = None
+    processor: ARDText | None = None
     software: dict[str, str] = Field(default_factory=dict)
     
     @model_validator(mode="after")
@@ -138,24 +138,24 @@ class CommonMetadata(MetadataModel):
     """Metadata shared by the ARD product and all contributing source scenes."""
     
     antenna_look_direction: Literal["LEFT", "RIGHT"]
-    constellation: str
-    instrument_short_name: str
-    operational_mode: str
+    constellation: ARDText
+    instrument_short_name: ARDText
+    operational_mode: ARDText
     orbit_direction: Literal["ascending", "descending"]
     orbit_mean_altitude: float = Field(gt=0)
     orbit_number_absolute: int = Field(ge=0)
     orbit_number_relative: int = Field(ge=0)
-    platform_full_name: str
-    platform_identifier: str
-    platform_reference: str
-    platform_short_name: str
+    platform_full_name: ARDText
+    platform_identifier: ARDText
+    platform_reference: ARDText
+    platform_short_name: ARDText
     polarizations: tuple[Polarization, ...] = Field(min_length=1)
-    polarization_mode: str
+    polarization_mode: ARDText
     processing_level: Literal["L1C"]
     radar_band: Literal["X", "C", "L"]
     radar_center_frequency: float = Field(gt=0)
     sensor_type: Literal["RADAR"]
-    swath_identifier: str
+    swath_identifier: ARDText
     wrs_longitude_grid: int = Field(ge=0)
 
 
@@ -163,14 +163,14 @@ class Card4lMetadata(MetadataModel):
     """Reference to the applicable CARD4L product-family specification."""
     
     specification: Literal["NRB", "ORB"]
-    version: str
-    document: str
+    version: ARDText
+    document: ARDText
 
 
 class CompressionMetadata(MetadataModel):
     """Compression configuration used for product raster assets."""
     
-    type: str
+    type: ARDText
     z_errors: dict[str, float]
 
 
@@ -184,33 +184,28 @@ class GroundSamplingDistance(MetadataModel):
 class DEMMetadata(MetadataModel):
     """Digital elevation model and Earth gravitational model metadata."""
     
-    name: str
+    name: ARDText
     type: Literal["surface", "elevation"]
-    reference: str
-    access: str
+    reference: ARDText
+    access: ARDText
     gsd: GroundSamplingDistance
-    resampling_method: str
-    egm_reference: str
-    egm_resampling_method: str
+    resampling_method: ARDText
+    egm_reference: ARDText
+    egm_resampling_method: ARDText
 
 
 class AxisAccuracy(MetadataModel):
     """Bias and standard deviation along one horizontal axis.
-
-    ``-99999`` is reserved for a mandatory value whose derivation is not yet
-    implemented by the producer. ``None`` is deliberately not accepted.
     """
     
-    bias: NumberOrNotImplemented = Field(
+    bias: ARDNumber = Field(
         description=(
-            "Horizontal bias, or -99999 if derivation of this mandatory "
-            "metadata value is not yet implemented."
+            "Horizontal bias"
         )
     )
-    standard_deviation: NonNegativeNumberOrNotImplemented = Field(
+    standard_deviation: ARDNonNegativeNumber = Field(
         description=(
-            "Horizontal standard deviation, or -99999 if derivation of this "
-            "mandatory metadata value is not yet implemented."
+            "Horizontal standard deviation"
         )
     )
 
@@ -221,16 +216,14 @@ class GeometricAccuracyMetadata(MetadataModel):
     type: Literal["gtc", "slant-range"]
     eastern: AxisAccuracy
     northern: AxisAccuracy
-    radial_rmse: NonNegativeNumberOrNotImplemented = Field(
+    radial_rmse: ARDNonNegativeNumber = Field(
         description=(
-            "Radial RMSE in metres, or -99999 if derivation of this mandatory "
-            "metadata value is not yet implemented."
+            "Radial RMSE in metres"
         )
     )
-    reference: TextOrNotImplemented = Field(
+    reference: ARDText = Field(
         description=(
-            "Reference documenting the accuracy estimate, or 'TBD' if this "
-            "mandatory value is not yet implemented."
+            "Reference documenting the accuracy estimate"
         )
     )
 
@@ -238,38 +231,33 @@ class GeometricAccuracyMetadata(MetadataModel):
 class GeometricCorrectionMetadata(MetadataModel):
     """Geometric correction algorithm and resulting accuracy."""
     
-    algorithm: str
-    resampling_method: str
+    algorithm: ARDText
+    resampling_method: ARDText
     accuracy: GeometricAccuracyMetadata
 
 
 class RadiometricAccuracyMetadata(MetadataModel):
     """Absolute and relative radiometric accuracy.
-
-    ``-99999`` is reserved for mandatory values whose derivation is not yet
-    implemented by the producer.
     """
     
-    absolute: NumberOrNotImplemented = Field(
+    absolute: ARDNumber = Field(
         description=(
-            "Absolute radiometric accuracy, or -99999 if derivation of this "
-            "mandatory metadata value is not yet implemented."
+            "Absolute radiometric accuracy"
         )
     )
-    relative: NumberOrNotImplemented = Field(
+    relative: ARDNumber = Field(
         description=(
-            "Relative radiometric accuracy, or -99999 if derivation of this "
-            "mandatory metadata value is not yet implemented."
+            "Relative radiometric accuracy"
         )
     )
-    reference: str
+    reference: ARDText
 
 
 class NoiseRemovalMetadata(MetadataModel):
     """Thermal-noise removal metadata."""
     
     applied: bool
-    algorithm: str | None = None
+    algorithm: ARDText | None = None
 
 
 class BackscatterMetadata(MetadataModel):
@@ -287,17 +275,17 @@ class GridMetadata(MetadataModel):
     """Raster grid, CRS and MGRS metadata for the ARD product."""
     
     epsg: int = Field(gt=0)
-    wkt: str
+    wkt: ARDText
     rows: int = Field(gt=0)
     columns: int = Field(gt=0)
     pixel_spacing_row: float = Field(gt=0)
     pixel_spacing_column: float = Field(gt=0)
     transform: AffineTransform
-    mgrs_id: str
+    mgrs_id: ARDText
     pixel_coordinate_convention: Literal["upper-left"]
     number_of_border_pixels: int = Field(ge=0)
-    definition_reference: str
-    convention_reference: str
+    definition_reference: ARDText
+    convention_reference: ARDText
 
 
 class WindNormalizationMetadata(MetadataModel):
@@ -306,7 +294,7 @@ class WindNormalizationMetadata(MetadataModel):
     backscatter_measurement: Literal["sigma0"] | None
     backscatter_convention: Literal["intensity ratio"] | None
     reference_direction: float | None
-    reference_model: str | None
+    reference_model: ARDText | None
     reference_speed: float | None = Field(ge=0)
     reference_type: Literal["sigma0-ref"] | None
 
@@ -322,9 +310,9 @@ class ProductMetadata(MetadataModel):
         "POTENTIAL", "REJECTED", "QUALITYDEGRADED"
     ]
     
-    access: str | None = None
-    doi: str | None = None
-    license: str | None = None
+    access: ARDText | None = None
+    doi: ARDText | None = None
+    license: ARDText | None = None
     
     time_start: AwareDatetime
     time_stop: AwareDatetime
@@ -341,11 +329,11 @@ class ProductMetadata(MetadataModel):
     radiometric_accuracy: RadiometricAccuracyMetadata
     noise_removal: NoiseRemovalMetadata
     
-    rtc_algorithm: str | None = None
+    rtc_algorithm: ARDText | None = None
     
     number_of_acquisitions: int = Field(gt=0)
     speckle_filter_applied: bool = False
-    ellipsoidal_height: float | None = None
+    ellipsoidal_height: ARDNumber | None = None
     wind_normalization: WindNormalizationMetadata | None = None
     
     @model_validator(mode="after")
@@ -358,11 +346,9 @@ class ProductMetadata(MetadataModel):
 class SwathAxisMetadata(MetadataModel):
     """Sampling and resolution metadata along one SAR image axis."""
     
-    look_bandwidth: dict[str, NumberOrNotImplemented | None] = Field(
+    look_bandwidth: dict[str, ARDNumber | None] = Field(
         description=(
-            "Look bandwidth per swath. -99999 denotes a mandatory value whose "
-            "derivation is not yet implemented; None denotes genuinely "
-            "unavailable/not-applicable source metadata."
+            "Look bandwidth per swath"
         )
     )
     number_of_looks: dict[str, PositiveFloat]
@@ -412,25 +398,25 @@ class SourceOrbitMetadata(MetadataModel):
     completion_time_from_ascending_node: float | None = None
     major_cycle_id: int = Field(ge=0)
     datatake_id: int | None = None
-    data_access: str
-    data_source: str | None = None
-    state_vector: str | None = None
+    data_access: ARDText
+    data_source: ARDText | None = None
+    state_vector: ARDText | None = None
 
 
 class SourceMetadata(MetadataModel):
     """Metadata describing one source product contributing to the ARD product."""
     
-    filename: str
-    product_type: str
-    data_geometry: str
+    filename: ARDText
+    product_type: ARDText
+    data_geometry: ARDText
     acquisition_type: Literal["NOMINAL", "CALIBRATION", "OTHER"]
     status: Literal[
         "ARCHIVED", "ACQUIRED", "CANCELLED", "FAILED", "PLANNED",
         "POTENTIAL", "REJECTED", "QUALITYDEGRADED"
     ]
     
-    access: str | None = None
-    doi: str | None = None
+    access: ARDText | None = None
+    doi: ARDText | None = None
     
     time_start: AwareDatetime
     time_stop: AwareDatetime
@@ -444,11 +430,11 @@ class SourceMetadata(MetadataModel):
     incidence_angle: IncidenceAngleMetadata
     instrument_azimuth_angle: float | None = None
     
-    lut_applied: str | None = None
-    sensor_calibration: str | None = None
-    polarimetric_calibration_matrices: str | None = None
-    faraday_mean_rotation_angle: float | None = None
-    faraday_rotation_reference: str | None = None
+    lut_applied: ARDText | None = None
+    sensor_calibration: ARDText | None = None
+    polarimetric_calibration_matrices: ARDText | None = None
+    faraday_mean_rotation_angle: ARDNumber | None = None
+    faraday_rotation_reference: ARDText | None = None
     ionosphere_indicator: bool | None = None
     
     performance: SourcePerformanceMetadata
