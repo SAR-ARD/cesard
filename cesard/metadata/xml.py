@@ -966,7 +966,7 @@ def _om_procedure(
         orbitMeanAltitude.text = '{:.2e}'.format(meta.common.orbit_mean_altitude)
         if source.orbit.datatake_id is not None:
             dataTakeID = etree.SubElement(acquisition, _nsc('_:dataTakeID', nsmap, ard_ns=ard_ns))
-            dataTakeID.text = source.orbit.datatake_id
+            dataTakeID.text = str(source.orbit.datatake_id)
         majorCycleID = etree.SubElement(acquisition, _nsc('_:majorCycleID', nsmap, ard_ns=ard_ns))
         majorCycleID.text = str(source.orbit.major_cycle_id)
 
