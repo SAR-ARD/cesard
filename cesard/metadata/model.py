@@ -732,7 +732,7 @@ class ARDMetadata(MetadataModel):
                         if source.get("processingDate") is not None
                         else None
                     ),
-                    mode=optional_text(source.get("processingMode")),
+                    mode=source.get("processingMode"),
                     processor=optional_text(source.get("processorName")),
                     software={str(k): str(v) for k, v in (source.get("processorVersion") or {}).items()},
                 ),
