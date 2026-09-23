@@ -213,7 +213,9 @@ class AxisAccuracy(MetadataModel):
 class GeometricAccuracyMetadata(MetadataModel):
     """Horizontal geolocation accuracy metadata."""
     
+    # types defined by card4l:geometric_accuracy_type
     type: Literal["gtc", "slant-range"]
+    
     eastern: AxisAccuracy
     northern: AxisAccuracy
     radial_rmse: ARDNonNegativeNumber = Field(
@@ -401,8 +403,8 @@ class SourceOrbitMetadata(MetadataModel):
     """Orbit metadata specific to an input source scene."""
     
     ascending_node_date: AwareDatetime | None = None
-    start_time_from_ascending_node: float | None = None
-    completion_time_from_ascending_node: float | None = None
+    start_time_from_ascending_node: ARDNumber | None = None
+    completion_time_from_ascending_node: ARDNumber | None = None
     major_cycle_id: int = Field(ge=0)
     datatake_id: int | None = None
     data_access: ARDText
@@ -590,9 +592,9 @@ class ARDMetadata(MetadataModel):
             wind = WindNormalizationMetadata(
                 backscatter_measurement=product["windNormBackscatterMeasurement"],
                 backscatter_convention=product["windNormBackscatterConvention"],
-                reference_direction=float(product["windNormReferenceDirection"]),
+                reference_direction=product["windNormReferenceDirection"],
                 reference_model=product["windNormReferenceModel"],
-                reference_speed=float(product["windNormReferenceSpeed"]),
+                reference_speed=product["windNormReferenceSpeed"],
                 reference_type=product["windNormReferenceType"],
             )
         
@@ -609,16 +611,16 @@ class ARDMetadata(MetadataModel):
             time_created=aware(product["timeCreated"]),
             geometry=geometry(product),
             grid=GridMetadata(
-                epsg=int(product["crsEPSG"]),
+                epsg=product["crsEPSG"],
                 wkt=product["crsWKT"],
-                rows=int(product["numLines"]),
-                columns=int(product["numPixelsPerLine"]),
-                pixel_spacing_row=float(product["pxSpacingRow"]),
-                pixel_spacing_column=float(product["pxSpacingColumn"]),
+                rows=product["numLines"],
+                columns=product["numPixelsPerLine"],
+                pixel_spacing_row=product["pxSpacingRow"],
+                pixel_spacing_column=product["pxSpacingColumn"],
                 transform=transform(product["transform"]),
                 mgrs_id=product["mgrsID"],
                 pixel_coordinate_convention=product["pixelCoordinateConvention"],
-                number_of_border_pixels=int(product["numBorderPixels"]),
+                number_of_border_pixels=product["numBorderPixels"],
                 definition_reference=product["grid_definition_url"],
                 convention_reference=product["grid_convention_url"],
             ),
@@ -652,8 +654,8 @@ class ARDMetadata(MetadataModel):
                 measurement=product["backscatterMeasurement"],
                 convention=product["backscatterConvention"],
                 conversion_equation=product["backscatterConversionEq"],
-                range_number_of_looks=float(product["rangeNumberOfLooks"]),
-                azimuth_number_of_looks=float(product["azimuthNumberOfLooks"]),
+                range_number_of_looks=product["rangeNumberOfLooks"],
+                azimuth_number_of_looks=product["azimuthNumberOfLooks"],
                 equivalent_number_of_looks=optional_number(
                     product.get("equivalentNumberOfLooks")
                 ),
@@ -689,7 +691,7 @@ class ARDMetadata(MetadataModel):
                 algorithm=optional_text(product.get("noiseRemovalAlgorithm")),
             ),
             rtc_algorithm=optional_text(product.get("RTCAlgorithm")),
-            number_of_acquisitions=int(product["numberOfAcquisitions"]),
+            number_of_acquisitions=product["numberOfAcquisitions"],
             speckle_filter_applied=(
                 None if product.get("speckleFilterApplied") is None else bool(product["speckleFilterApplied"])),
             ellipsoidal_height=optional_number(product.get("ellipsoidalHeight")),
@@ -735,13 +737,9 @@ class ARDMetadata(MetadataModel):
                         if source.get("ascendingNodeDate") is not None
                         else None
                     ),
-                    start_time_from_ascending_node=optional_number(
-                        source.get("timeStartFromAscendingNode")
-                    ),
-                    completion_time_from_ascending_node=optional_number(
-                        source.get("timeCompletionFromAscendingNode")
-                    ),
-                    major_cycle_id=int(source["majorCycleID"]),
+                    start_time_from_ascending_node=source["timeStartFromAscendingNode"],
+                    completion_time_from_ascending_node=source["timeCompletionFromAscendingNode"],
+                    major_cycle_id=source["majorCycleID"],
                     datatake_id=source.get("datatakeID"),
                     data_access=source["orbitDataAccess"],
                     data_source=optional_text(source.get("orbitDataSource")),
@@ -767,9 +765,9 @@ class ARDMetadata(MetadataModel):
                     resolution=per_swath_float(source["rangeResolution"]),
                 ),
                 incidence_angle=IncidenceAngleMetadata(
-                    minimum=float(source["incidenceAngleMin"]),
-                    maximum=float(source["incidenceAngleMax"]),
-                    mid_swath=float(source["incidenceAngleMidSwath"]),
+                    minimum=source["incidenceAngleMin"],
+                    maximum=source["incidenceAngleMax"],
+                    mid_swath=source["incidenceAngleMidSwath"],
                 ),
                 instrument_azimuth_angle=optional_number(
                     source.get("instrumentAzimuthAngle")
@@ -810,9 +808,9 @@ class ARDMetadata(MetadataModel):
                 instrument_short_name=common["instrumentShortName"],
                 operational_mode=common["operationalMode"],
                 orbit_direction=common["orbitDirection"],
-                orbit_mean_altitude=float(common["orbitMeanAltitude"]),
-                orbit_number_absolute=int(common["orbitNumber_abs"]),
-                orbit_number_relative=int(common["orbitNumber_rel"]),
+                orbit_mean_altitude=common["orbitMeanAltitude"],
+                orbit_number_absolute=common["orbitNumber_abs"],
+                orbit_number_relative=common["orbitNumber_rel"],
                 platform_full_name=common["platformFullname"],
                 platform_identifier=str(common["platformIdentifier"]),
                 platform_reference=common["platformReference"],
@@ -821,10 +819,10 @@ class ARDMetadata(MetadataModel):
                 polarization_mode=common["polarisationMode"],
                 processing_level=common["processingLevel"],
                 radar_band=common["radarBand"],
-                radar_center_frequency=float(common["radarCenterFreq"]),
+                radar_center_frequency=common["radarCenterFreq"],
                 sensor_type=common["sensorType"],
                 swath_identifier=common["swathIdentifier"],
-                wrs_longitude_grid=int(common["wrsLongitudeGrid"]),
+                wrs_longitude_grid=common["wrsLongitudeGrid"],
             ),
             product=product_model,
             sources=source_models,
