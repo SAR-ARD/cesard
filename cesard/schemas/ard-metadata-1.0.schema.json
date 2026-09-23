@@ -1,34 +1,48 @@
 {
-  "$comment": "Reserved CESARD implementation sentinels: NOT_IMPLEMENTED_NUMBER = -99999; NOT_IMPLEMENTED_TEXT = 'TBD'. These values denote mandatory metadata whose derivation is not yet implemented and are distinct from null/None.",
+  "$comment": "Reserved CESARD implementation markers: NOT_IMPLEMENTED_NUMBER = -99999; NOT_IMPLEMENTED_TEXT = 'TBD'. These values denote mandatory metadata whose derivation is not yet implemented and are distinct from null/None.",
   "$defs": {
+    "ARDNonNegativeNumber": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "$ref": "#/$defs/NotImplementedNumber"
+        }
+      ]
+    },
+    "ARDNumber": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "$ref": "#/$defs/NotImplementedNumber"
+        }
+      ]
+    },
+    "ARDText": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "$ref": "#/$defs/NotImplementedText"
+        }
+      ]
+    },
     "AxisAccuracy": {
       "additionalProperties": false,
-      "description": "Bias and standard deviation along one horizontal axis.\n\n``-99999`` is reserved for a mandatory value whose derivation is not yet\nimplemented by the producer. ``None`` is deliberately not accepted.",
+      "description": "Bias and standard deviation along one horizontal axis.\n    ",
       "properties": {
         "bias": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "$ref": "#/$defs/NotImplementedNumber"
-            }
-          ],
-          "description": "Horizontal bias, or -99999 if derivation of this mandatory metadata value is not yet implemented.",
-          "title": "Bias"
+          "$ref": "#/$defs/ARDNumber",
+          "description": "Horizontal bias"
         },
         "standard_deviation": {
-          "anyOf": [
-            {
-              "minimum": 0,
-              "type": "number"
-            },
-            {
-              "$ref": "#/$defs/NotImplementedNumber"
-            }
-          ],
-          "description": "Horizontal standard deviation, or -99999 if derivation of this mandatory metadata value is not yet implemented.",
-          "title": "Standard Deviation"
+          "$ref": "#/$defs/ARDNonNegativeNumber",
+          "description": "Horizontal standard deviation"
         }
       },
       "required": [
@@ -107,12 +121,10 @@
           "type": "string"
         },
         "version": {
-          "title": "Version",
-          "type": "string"
+          "$ref": "#/$defs/ARDText"
         },
         "document": {
-          "title": "Document",
-          "type": "string"
+          "$ref": "#/$defs/ARDText"
         }
       },
       "required": [
@@ -136,16 +148,13 @@
           "type": "string"
         },
         "constellation": {
-          "title": "Constellation",
-          "type": "string"
+          "$ref": "#/$defs/ARDText"
         },
         "instrument_short_name": {
-          "title": "Instrument Short Name",
-          "type": "string"
+          "$ref": "#/$defs/ARDText"
         },
         "operational_mode": {
-          "title": "Operational Mode",
-          "type": "string"
+          "$ref": "#/$defs/ARDText"
         },
         "orbit_direction": {
           "enum": [
@@ -171,20 +180,16 @@
           "type": "integer"
         },
         "platform_full_name": {
-          "title": "Platform Full Name",
-          "type": "string"
+          "$ref": "#/$defs/ARDText"
         },
         "platform_identifier": {
-          "title": "Platform Identifier",
-          "type": "string"
+          "$ref": "#/$defs/ARDText"
         },
         "platform_reference": {
-          "title": "Platform Reference",
-          "type": "string"
+          "$ref": "#/$defs/ARDText"
         },
         "platform_short_name": {
-          "title": "Platform Short Name",
-          "type": "string"
+          "$ref": "#/$defs/ARDText"
         },
         "polarizations": {
           "items": {
@@ -201,8 +206,7 @@
           "type": "array"
         },
         "polarization_mode": {
-          "title": "Polarization Mode",
-          "type": "string"
+          "$ref": "#/$defs/ARDText"
         },
         "processing_level": {
           "const": "L1C",
@@ -229,8 +233,7 @@
           "type": "string"
         },
         "swath_identifier": {
-          "title": "Swath Identifier",
-          "type": "string"
+          "$ref": "#/$defs/ARDText"
         },
         "wrs_longitude_grid": {
           "minimum": 0,
@@ -268,8 +271,7 @@
       "description": "Compression configuration used for product raster assets.",
       "properties": {
         "type": {
-          "title": "Type",
-          "type": "string"
+          "$ref": "#/$defs/ARDText"
         },
         "z_errors": {
           "additionalProperties": {
@@ -291,8 +293,7 @@
       "description": "Digital elevation model and Earth gravitational model metadata.",
       "properties": {
         "name": {
-          "title": "Name",
-          "type": "string"
+          "$ref": "#/$defs/ARDText"
         },
         "type": {
           "enum": [
@@ -303,27 +304,22 @@
           "type": "string"
         },
         "reference": {
-          "title": "Reference",
-          "type": "string"
+          "$ref": "#/$defs/ARDText"
         },
         "access": {
-          "title": "Access",
-          "type": "string"
+          "$ref": "#/$defs/ARDText"
         },
         "gsd": {
           "$ref": "#/$defs/GroundSamplingDistance"
         },
         "resampling_method": {
-          "title": "Resampling Method",
-          "type": "string"
+          "$ref": "#/$defs/ARDText"
         },
         "egm_reference": {
-          "title": "Egm Reference",
-          "type": "string"
+          "$ref": "#/$defs/ARDText"
         },
         "egm_resampling_method": {
-          "title": "Egm Resampling Method",
-          "type": "string"
+          "$ref": "#/$defs/ARDText"
         }
       },
       "required": [
@@ -358,29 +354,12 @@
           "$ref": "#/$defs/AxisAccuracy"
         },
         "radial_rmse": {
-          "anyOf": [
-            {
-              "minimum": 0,
-              "type": "number"
-            },
-            {
-              "$ref": "#/$defs/NotImplementedNumber"
-            }
-          ],
-          "description": "Radial RMSE in metres, or -99999 if derivation of this mandatory metadata value is not yet implemented.",
-          "title": "Radial Rmse"
+          "$ref": "#/$defs/ARDNonNegativeNumber",
+          "description": "Radial RMSE in metres"
         },
         "reference": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "$ref": "#/$defs/NotImplementedText"
-            }
-          ],
-          "description": "Reference documenting the accuracy estimate, or 'TBD' if this mandatory value is not yet implemented.",
-          "title": "Reference"
+          "$ref": "#/$defs/ARDText",
+          "description": "Reference documenting the accuracy estimate"
         }
       },
       "required": [
@@ -398,12 +377,10 @@
       "description": "Geometric correction algorithm and resulting accuracy.",
       "properties": {
         "algorithm": {
-          "title": "Algorithm",
-          "type": "string"
+          "$ref": "#/$defs/ARDText"
         },
         "resampling_method": {
-          "title": "Resampling Method",
-          "type": "string"
+          "$ref": "#/$defs/ARDText"
         },
         "accuracy": {
           "$ref": "#/$defs/GeometricAccuracyMetadata"
@@ -492,8 +469,7 @@
           "type": "integer"
         },
         "wkt": {
-          "title": "Wkt",
-          "type": "string"
+          "$ref": "#/$defs/ARDText"
         },
         "rows": {
           "exclusiveMinimum": 0,
@@ -542,8 +518,7 @@
           "type": "array"
         },
         "mgrs_id": {
-          "title": "Mgrs Id",
-          "type": "string"
+          "$ref": "#/$defs/ARDText"
         },
         "pixel_coordinate_convention": {
           "const": "upper-left",
@@ -556,12 +531,10 @@
           "type": "integer"
         },
         "definition_reference": {
-          "title": "Definition Reference",
-          "type": "string"
+          "$ref": "#/$defs/ARDText"
         },
         "convention_reference": {
-          "title": "Convention Reference",
-          "type": "string"
+          "$ref": "#/$defs/ARDText"
         }
       },
       "required": [
@@ -639,14 +612,13 @@
         "algorithm": {
           "anyOf": [
             {
-              "type": "string"
+              "$ref": "#/$defs/ARDText"
             },
             {
               "type": "null"
             }
           ],
-          "default": null,
-          "title": "Algorithm"
+          "default": null
         }
       },
       "required": [
@@ -714,14 +686,13 @@
         "facility": {
           "anyOf": [
             {
-              "type": "string"
+              "$ref": "#/$defs/ARDText"
             },
             {
               "type": "null"
             }
           ],
-          "default": null,
-          "title": "Facility"
+          "default": null
         },
         "date": {
           "anyOf": [
@@ -747,14 +718,13 @@
         "processor": {
           "anyOf": [
             {
-              "type": "string"
+              "$ref": "#/$defs/ARDText"
             },
             {
               "type": "null"
             }
           ],
-          "default": null,
-          "title": "Processor"
+          "default": null
         },
         "software": {
           "additionalProperties": {
@@ -816,38 +786,35 @@
         "access": {
           "anyOf": [
             {
-              "type": "string"
+              "$ref": "#/$defs/ARDText"
             },
             {
               "type": "null"
             }
           ],
-          "default": null,
-          "title": "Access"
+          "default": null
         },
         "doi": {
           "anyOf": [
             {
-              "type": "string"
+              "$ref": "#/$defs/ARDText"
             },
             {
               "type": "null"
             }
           ],
-          "default": null,
-          "title": "Doi"
+          "default": null
         },
         "license": {
           "anyOf": [
             {
-              "type": "string"
+              "$ref": "#/$defs/ARDText"
             },
             {
               "type": "null"
             }
           ],
-          "default": null,
-          "title": "License"
+          "default": null
         },
         "time_start": {
           "format": "date-time",
@@ -897,14 +864,13 @@
         "rtc_algorithm": {
           "anyOf": [
             {
-              "type": "string"
+              "$ref": "#/$defs/ARDText"
             },
             {
               "type": "null"
             }
           ],
-          "default": null,
-          "title": "Rtc Algorithm"
+          "default": null
         },
         "number_of_acquisitions": {
           "exclusiveMinimum": 0,
@@ -912,21 +878,25 @@
           "type": "integer"
         },
         "speckle_filter_applied": {
-          "default": false,
-          "title": "Speckle Filter Applied",
-          "type": "boolean"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SpeckleFilterMetadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "ellipsoidal_height": {
           "anyOf": [
             {
-              "type": "number"
+              "$ref": "#/$defs/ARDNumber"
             },
             {
               "type": "null"
             }
           ],
-          "default": null,
-          "title": "Ellipsoidal Height"
+          "default": null
         },
         "wind_normalization": {
           "anyOf": [
@@ -958,42 +928,26 @@
         "geometric_correction",
         "radiometric_accuracy",
         "noise_removal",
-        "number_of_acquisitions"
+        "number_of_acquisitions",
+        "speckle_filter_applied"
       ],
       "title": "ProductMetadata",
       "type": "object"
     },
     "RadiometricAccuracyMetadata": {
       "additionalProperties": false,
-      "description": "Absolute and relative radiometric accuracy.\n\n``-99999`` is reserved for mandatory values whose derivation is not yet\nimplemented by the producer.",
+      "description": "Absolute and relative radiometric accuracy.\n    ",
       "properties": {
         "absolute": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "$ref": "#/$defs/NotImplementedNumber"
-            }
-          ],
-          "description": "Absolute radiometric accuracy, or -99999 if derivation of this mandatory metadata value is not yet implemented.",
-          "title": "Absolute"
+          "$ref": "#/$defs/ARDNumber",
+          "description": "Absolute radiometric accuracy"
         },
         "relative": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "$ref": "#/$defs/NotImplementedNumber"
-            }
-          ],
-          "description": "Relative radiometric accuracy, or -99999 if derivation of this mandatory metadata value is not yet implemented.",
-          "title": "Relative"
+          "$ref": "#/$defs/ARDNumber",
+          "description": "Relative radiometric accuracy"
         },
         "reference": {
-          "title": "Reference",
-          "type": "string"
+          "$ref": "#/$defs/ARDText"
         }
       },
       "required": [
@@ -1009,16 +963,13 @@
       "description": "Metadata describing one source product contributing to the ARD product.",
       "properties": {
         "filename": {
-          "title": "Filename",
-          "type": "string"
+          "$ref": "#/$defs/ARDText"
         },
         "product_type": {
-          "title": "Product Type",
-          "type": "string"
+          "$ref": "#/$defs/ARDText"
         },
         "data_geometry": {
-          "title": "Data Geometry",
-          "type": "string"
+          "$ref": "#/$defs/ARDText"
         },
         "acquisition_type": {
           "enum": [
@@ -1046,26 +997,24 @@
         "access": {
           "anyOf": [
             {
-              "type": "string"
+              "$ref": "#/$defs/ARDText"
             },
             {
               "type": "null"
             }
           ],
-          "default": null,
-          "title": "Access"
+          "default": null
         },
         "doi": {
           "anyOf": [
             {
-              "type": "string"
+              "$ref": "#/$defs/ARDText"
             },
             {
               "type": "null"
             }
           ],
-          "default": null,
-          "title": "Doi"
+          "default": null
         },
         "time_start": {
           "format": "date-time",
@@ -1118,62 +1067,57 @@
         "lut_applied": {
           "anyOf": [
             {
-              "type": "string"
+              "$ref": "#/$defs/ARDText"
             },
             {
               "type": "null"
             }
           ],
-          "default": null,
-          "title": "Lut Applied"
+          "default": null
         },
         "sensor_calibration": {
           "anyOf": [
             {
-              "type": "string"
+              "$ref": "#/$defs/ARDText"
             },
             {
               "type": "null"
             }
           ],
-          "default": null,
-          "title": "Sensor Calibration"
+          "default": null
         },
         "polarimetric_calibration_matrices": {
           "anyOf": [
             {
-              "type": "string"
+              "$ref": "#/$defs/ARDText"
             },
             {
               "type": "null"
             }
           ],
-          "default": null,
-          "title": "Polarimetric Calibration Matrices"
+          "default": null
         },
         "faraday_mean_rotation_angle": {
           "anyOf": [
             {
-              "type": "number"
+              "$ref": "#/$defs/ARDNumber"
             },
             {
               "type": "null"
             }
           ],
-          "default": null,
-          "title": "Faraday Mean Rotation Angle"
+          "default": null
         },
         "faraday_rotation_reference": {
           "anyOf": [
             {
-              "type": "string"
+              "$ref": "#/$defs/ARDText"
             },
             {
               "type": "null"
             }
           ],
-          "default": null,
-          "title": "Faraday Rotation Reference"
+          "default": null
         },
         "ionosphere_indicator": {
           "anyOf": [
@@ -1231,26 +1175,24 @@
         "start_time_from_ascending_node": {
           "anyOf": [
             {
-              "type": "number"
+              "$ref": "#/$defs/ARDNumber"
             },
             {
               "type": "null"
             }
           ],
-          "default": null,
-          "title": "Start Time From Ascending Node"
+          "default": null
         },
         "completion_time_from_ascending_node": {
           "anyOf": [
             {
-              "type": "number"
+              "$ref": "#/$defs/ARDNumber"
             },
             {
               "type": "null"
             }
           ],
-          "default": null,
-          "title": "Completion Time From Ascending Node"
+          "default": null
         },
         "major_cycle_id": {
           "minimum": 0,
@@ -1270,32 +1212,29 @@
           "title": "Datatake Id"
         },
         "data_access": {
-          "title": "Data Access",
-          "type": "string"
+          "$ref": "#/$defs/ARDText"
         },
         "data_source": {
           "anyOf": [
             {
-              "type": "string"
+              "$ref": "#/$defs/ARDText"
             },
             {
               "type": "null"
             }
           ],
-          "default": null,
-          "title": "Data Source"
+          "default": null
         },
         "state_vector": {
           "anyOf": [
             {
-              "type": "string"
+              "$ref": "#/$defs/ARDText"
             },
             {
               "type": "null"
             }
           ],
-          "default": null,
-          "title": "State Vector"
+          "default": null
         }
       },
       "required": [
@@ -1381,6 +1320,30 @@
       "title": "SourcePerformanceMetadata",
       "type": "object"
     },
+    "SpeckleFilterMetadata": {
+      "additionalProperties": true,
+      "properties": {
+        "type": {
+          "title": "Type",
+          "type": "string"
+        },
+        "window_size_col": {
+          "title": "Window Size Col",
+          "type": "string"
+        },
+        "window_size_line": {
+          "title": "Window Size Line",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "window_size_col",
+        "window_size_line"
+      ],
+      "title": "SpeckleFilterMetadata",
+      "type": "object"
+    },
     "SwathAxisMetadata": {
       "additionalProperties": false,
       "description": "Sampling and resolution metadata along one SAR image axis.",
@@ -1389,17 +1352,14 @@
           "additionalProperties": {
             "anyOf": [
               {
-                "type": "number"
-              },
-              {
-                "$ref": "#/$defs/NotImplementedNumber"
+                "$ref": "#/$defs/ARDNumber"
               },
               {
                 "type": "null"
               }
             ]
           },
-          "description": "Look bandwidth per swath. -99999 denotes a mandatory value whose derivation is not yet implemented; None denotes genuinely unavailable/not-applicable source metadata.",
+          "description": "Look bandwidth per swath",
           "title": "Look Bandwidth",
           "type": "object"
         },
@@ -1479,13 +1439,12 @@
         "reference_model": {
           "anyOf": [
             {
-              "type": "string"
+              "$ref": "#/$defs/ARDText"
             },
             {
               "type": "null"
             }
-          ],
-          "title": "Reference Model"
+          ]
         },
         "reference_speed": {
           "anyOf": [
