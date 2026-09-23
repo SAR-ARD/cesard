@@ -480,7 +480,7 @@ class ARDMetadata(MetadataModel):
         json_schema_extra={
             "$schema": "https://json-schema.org/draft/2020-12/schema",
             "$comment": (
-                "Reserved CESARD implementation sentinels: "
+                "Reserved CESARD implementation markers: "
                 "NOT_IMPLEMENTED_NUMBER = -99999; "
                 "NOT_IMPLEMENTED_TEXT = 'TBD'. These values denote mandatory "
                 "metadata whose derivation is not yet implemented and are "
@@ -517,7 +517,7 @@ class ARDMetadata(MetadataModel):
         """Convert the current ``common/prod/source`` dictionaries to the model.
 
         This adapter is intended as a migration aid for the current s1ard and
-        asard ``meta_dict`` implementations. Reserved implementation sentinels
+        asard ``meta_dict`` implementations. Reserved implementation markers
         ``-99999`` and ``'TBD'`` are preserved. The legacy string ``'None'`` is
         converted to ``None`` only for genuinely optional metadata.
         """
