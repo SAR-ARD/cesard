@@ -93,7 +93,7 @@ def test_geometry_from_vec(
 
 
 def test_metadata_schema_is_current():
-    path = Path('cesard/schemas/ard-metadata-1.0.schema.json')
+    path = Path(__file__).parent / '../cesard/schemas/ard-metadata-1.0.schema.json'
     expected = ARDMetadata.model_json_schema()
     actual = json.loads(path.read_text())
     assert actual == expected
