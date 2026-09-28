@@ -123,13 +123,15 @@ def validate_value(
     
     Parameters
     ----------
-    k:
+    k
         the configuration key
-    v:
+    v
         the configuration value
 
-    Returns
-    -------
+    Raises
+    ------
+    ValueError
+        if the value is invalid
 
     """
     
