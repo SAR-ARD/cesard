@@ -1008,7 +1008,12 @@
           "$ref": "#/$defs/ARDText"
         },
         "data_geometry": {
-          "$ref": "#/$defs/ARDText"
+          "enum": [
+            "slant-range",
+            "ground-range"
+          ],
+          "title": "Data Geometry",
+          "type": "string"
         },
         "acquisition_type": {
           "enum": [

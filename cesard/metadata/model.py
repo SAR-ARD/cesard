@@ -428,7 +428,7 @@ class SourceMetadata(MetadataModel):
     
     filename: ARDText
     product_type: ARDText
-    data_geometry: ARDText
+    data_geometry: Literal["slant-range", "ground-range"]
     acquisition_type: Literal["NOMINAL", "CALIBRATION", "OTHER"]
     status: Literal[
         "ARCHIVED", "ACQUIRED", "CANCELLED", "FAILED", "PLANNED",
