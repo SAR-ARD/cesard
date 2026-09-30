@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Literal, Mapping
+from typing import Any, Literal, Mapping, Self
 
 from pydantic import (
     AwareDatetime,
@@ -190,8 +190,17 @@ class DEMMetadata(MetadataModel):
     access: ARDText
     gsd: GroundSamplingDistance
     resampling_method: ARDText
-    egm_reference: ARDText
-    egm_resampling_method: ARDText
+    egm_reference: ARDText | None
+    egm_resampling_method: ARDText | None
+    
+    @model_validator(mode='after')
+    def validate_egm(self) -> Self:
+        if (self.egm_reference is None) != (self.egm_resampling_method is None):
+            raise ValueError(
+                'egm_reference and egm_resampling_method must either both be set '
+                'or both be None'
+            )
+        return self
 
 
 class AxisAccuracy(MetadataModel):

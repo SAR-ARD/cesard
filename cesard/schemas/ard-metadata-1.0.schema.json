@@ -338,10 +338,24 @@
           "$ref": "#/$defs/ARDText"
         },
         "egm_reference": {
-          "$ref": "#/$defs/ARDText"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ARDText"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "egm_resampling_method": {
-          "$ref": "#/$defs/ARDText"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ARDText"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
