@@ -416,8 +416,8 @@ class SourceOrbitMetadata(MetadataModel):
     ascending_node_date: AwareDatetime | None = None
     start_time_from_ascending_node: ARDNumber | None = None
     completion_time_from_ascending_node: ARDNumber | None = None
-    major_cycle_id: int = Field(ge=0)
-    datatake_id: int | None = None
+    major_cycle_id: ARDPositiveInteger | None = None
+    datatake_id: ARDPositiveInteger | None = None
     data_access: ARDText
     data_source: ARDText | None = None
     state_vector: ARDText | None = None

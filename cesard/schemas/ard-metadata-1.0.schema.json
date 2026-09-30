@@ -1234,21 +1234,26 @@
           "default": null
         },
         "major_cycle_id": {
-          "minimum": 0,
-          "title": "Major Cycle Id",
-          "type": "integer"
-        },
-        "datatake_id": {
           "anyOf": [
             {
-              "type": "integer"
+              "$ref": "#/$defs/ARDPositiveInteger"
             },
             {
               "type": "null"
             }
           ],
-          "default": null,
-          "title": "Datatake Id"
+          "default": null
+        },
+        "datatake_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ARDPositiveInteger"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "data_access": {
           "$ref": "#/$defs/ARDText"
@@ -1277,7 +1282,6 @@
         }
       },
       "required": [
-        "major_cycle_id",
         "data_access"
       ],
       "title": "SourceOrbitMetadata",
