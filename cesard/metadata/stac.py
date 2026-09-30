@@ -446,7 +446,10 @@ def product_json(
     item.properties['card4l:absolute_radiometric_accuracy'] = product.radiometric_accuracy.absolute
     item.properties['card4l:resampling_method'] = product.geometric_correction.resampling_method
     item.properties['card4l:dem_resampling_method'] = product.dem.resampling_method
-    item.properties['card4l:egm_resampling_method'] = product.dem.egm_resampling_method
+    if product.dem.egm_resampling_method is not None:
+        item.properties["card4l:egm_resampling_method"] = (
+            product.dem.egm_resampling_method
+        )
     item.properties['card4l:gridding_convention'] = 'Sentinel-2 MGRS'
     
     accuracy = product.geometric_correction.accuracy

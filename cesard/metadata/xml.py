@@ -658,11 +658,19 @@ def product_xml(
     demGSD = etree.SubElement(processingInformation, _nsc('_:DEMGroundSamplingDistance', nsmap, ard_ns=ard_ns),
                               attrib={'uom': meta.product.dem.gsd.unit})
     demGSD.text = str(meta.product.dem.gsd.value)
-    egmReference = etree.SubElement(processingInformation, _nsc('_:EGMReference', nsmap, ard_ns=ard_ns),
-                                    attrib={_nsc('xlink:href', nsmap): meta.product.dem.egm_reference})
-    egmResamplingMethod = etree.SubElement(processingInformation, _nsc('_:EGMResamplingMethod', nsmap,
-                                                                       ard_ns=ard_ns))
-    egmResamplingMethod.text = meta.product.dem.egm_resampling_method.upper()
+    
+    if meta.product.dem.egm_resampling_method is not None:
+        egmReference = etree.SubElement(
+            processingInformation,
+            _nsc('_:EGMReference', nsmap, ard_ns=ard_ns),
+            attrib={_nsc('xlink:href', nsmap): meta.product.dem.egm_reference}
+        )
+        egmResamplingMethod = etree.SubElement(
+            processingInformation,
+            _nsc('_:EGMResamplingMethod', nsmap,
+                 ard_ns=ard_ns)
+        )
+        egmResamplingMethod.text = meta.product.dem.egm_resampling_method.upper()
     
     productType = etree.SubElement(earthObservationMetaData, _nsc('_:productType', nsmap, ard_ns=ard_ns),
                                    attrib={'codeSpace': 'urn:esa:eop:Sentinel1:class'})
