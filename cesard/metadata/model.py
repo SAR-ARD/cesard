@@ -353,9 +353,9 @@ class SwathAxisMetadata(MetadataModel):
             "Look bandwidth per swath"
         )
     )
-    number_of_looks: dict[str, PositiveFloat]
-    pixel_spacing: dict[str, PositiveFloat]
-    resolution: dict[str, PositiveFloat]
+    number_of_looks: dict[str, ARDPositiveInteger]
+    pixel_spacing: dict[str, ARDPositiveNumber]
+    resolution: dict[str, ARDPositiveNumber]
 
 
 class SpeckleFilterMetadata(MetadataModel):

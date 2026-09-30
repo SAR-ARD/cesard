@@ -22,6 +22,28 @@
         }
       ]
     },
+    "ARDPositiveInteger": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "type": "integer"
+        },
+        {
+          "$ref": "#/$defs/NotImplementedNumber"
+        }
+      ]
+    },
+    "ARDPositiveNumber": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        {
+          "$ref": "#/$defs/NotImplementedNumber"
+        }
+      ]
+    },
     "ARDText": {
       "anyOf": [
         {
@@ -1365,24 +1387,21 @@
         },
         "number_of_looks": {
           "additionalProperties": {
-            "exclusiveMinimum": 0,
-            "type": "number"
+            "$ref": "#/$defs/ARDPositiveInteger"
           },
           "title": "Number Of Looks",
           "type": "object"
         },
         "pixel_spacing": {
           "additionalProperties": {
-            "exclusiveMinimum": 0,
-            "type": "number"
+            "$ref": "#/$defs/ARDPositiveNumber"
           },
           "title": "Pixel Spacing",
           "type": "object"
         },
         "resolution": {
           "additionalProperties": {
-            "exclusiveMinimum": 0,
-            "type": "number"
+            "$ref": "#/$defs/ARDPositiveNumber"
           },
           "title": "Resolution",
           "type": "object"
