@@ -33,6 +33,8 @@ Polarization = Literal["HH", "HV", "VH", "VV"]
 # implemented. These are valid interface values and are intentionally kept
 # distinct from ``None``, which denotes genuinely optional/not-applicable
 # metadata.
+# Mind however that this is not rigorous. ``str | NotImplementedText``
+# effectively allows every string, also empty ones.
 NOT_IMPLEMENTED_NUMBER = -99999
 NOT_IMPLEMENTED_TEXT = "TBD"
 
