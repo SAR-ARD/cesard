@@ -3,7 +3,7 @@ import os
 import re
 from datetime import datetime, timezone
 from statistics import mean
-from typing import Any, Mapping
+from typing import Mapping
 
 import pystac
 from pystac.extensions.classification import Classification, ClassificationExtension
@@ -32,19 +32,6 @@ from cesard.metadata.model import (
 
 log = logging.getLogger('cesard')
 
-MetadataInput = ARDMetadata | Mapping[str, Any]
-
-
-def _as_model(meta: MetadataInput) -> ARDMetadata:
-    """Return *meta* as validated :class:`ARDMetadata`.
-
-    Legacy ``common/prod/source`` dictionaries remain supported during the
-    migration period and are converted using :meth:`ARDMetadata.from_legacy`.
-    """
-    if isinstance(meta, ARDMetadata):
-        return meta
-    return ARDMetadata.from_legacy(meta)
-
 
 def _mean(values: Mapping[str, float]) -> float:
     """Return the arithmetic mean of per-swath values."""
@@ -68,7 +55,7 @@ def _bandwidth_ghz(
 
 
 def parse(
-        meta: MetadataInput,
+        meta: ARDMetadata,
         target: str,
         assets: list[str],
         exist_ok: bool = False
@@ -78,9 +65,7 @@ def parse(
     Parameters
     ----------
     meta:
-        Validated :class:`~cesard.metadata.model.ARDMetadata` or a legacy
-        ``common/prod/source`` metadata dictionary. Legacy dictionaries are
-        converted and validated with :meth:`ARDMetadata.from_legacy`.
+        A validated :class:`~cesard.metadata.model.ARDMetadata`.
     target:
         Path pointing to the root directory of a product scene.
     assets:
@@ -88,18 +73,16 @@ def parse(
     exist_ok:
         Do not create files if they already exist?
     """
-    meta = _as_model(meta)
     source_json(meta=meta, target=target, exist_ok=exist_ok)
     product_json(meta=meta, target=target, assets=assets, exist_ok=exist_ok)
 
 
 def source_json(
-        meta: MetadataInput,
+        meta: ARDMetadata,
         target: str,
         exist_ok: bool = False
 ) -> None:
     """Create source-level STAC JSON metadata."""
-    meta = _as_model(meta)
     common = meta.common
     product = meta.product
     metadir = os.path.join(target, 'source')
@@ -356,13 +339,12 @@ def _asset_add_orig_src(
 
 
 def product_json(
-        meta: MetadataInput,
+        meta: ARDMetadata,
         target: str,
         assets: list[str],
         exist_ok: bool = False
 ) -> None:
     """Create product-level STAC JSON metadata."""
-    meta = _as_model(meta)
     common = meta.common
     product = meta.product
     

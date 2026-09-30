@@ -10,12 +10,10 @@ from statistics import mean
 from cesard.metadata.mapping import ASSET_MAP, NS_MAP
 from cesard.metadata.model import ARDMetadata, ProcessingMetadata
 from cesard.metadata.extract import get_header_size
-from typing import Any, Mapping
+from typing import Mapping
 import logging
 
 log = logging.getLogger('cesard')
-
-MetadataInput = ARDMetadata | Mapping[str, Any]
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,17 +51,6 @@ def _append_xml_field(
     return element
 
 
-def _as_model(meta: MetadataInput) -> ARDMetadata:
-    """Return *meta* as validated :class:`ARDMetadata`.
-
-    Legacy ``common/prod/source`` dictionaries remain supported during the
-    migration period and are converted using :meth:`ARDMetadata.from_legacy`.
-    """
-    if isinstance(meta, ARDMetadata):
-        return meta
-    return ARDMetadata.from_legacy(meta)
-
-
 def _processor_version(processing: ProcessingMetadata) -> str | None:
     """Return the version of the primary processor, if available."""
     if processing.processor is None:
@@ -72,7 +59,7 @@ def _processor_version(processing: ProcessingMetadata) -> str | None:
 
 
 def parse(
-        meta: MetadataInput,
+        meta: ARDMetadata,
         target: str,
         assets: list[str],
         exist_ok: bool = False
@@ -83,9 +70,7 @@ def parse(
     Parameters
     ----------
     meta:
-        Validated :class:`~cesard.metadata.model.ARDMetadata` or a legacy
-        ``common/prod/source`` metadata dictionary. Legacy dictionaries are
-        converted and validated with :meth:`ARDMetadata.from_legacy`.
+        A validated :class:`~cesard.metadata.model.ARDMetadata` object.
     target:
         A path pointing to the root directory of a product scene.
     assets:
@@ -93,7 +78,6 @@ def parse(
     exist_ok:
         Do not create files if they already exist?
     """
-    meta = _as_model(meta)
     
     platform = meta.common.platform_short_name
     pid = {'Sentinel-1': 's1', 'ERS': 'ers', 'ENVISAT': 'env'}[platform]
@@ -111,7 +95,7 @@ def parse(
 
 
 def source_xml(
-        meta: MetadataInput,
+        meta: ARDMetadata,
         target: str,
         nsmap: dict[str, str],
         ard_ns: str,
@@ -123,9 +107,7 @@ def source_xml(
     Parameters
     ----------
     meta:
-        Validated :class:`~cesard.metadata.model.ARDMetadata` or a legacy
-        ``common/prod/source`` metadata dictionary. Legacy dictionaries are
-        converted and validated with :meth:`ARDMetadata.from_legacy`.
+        A validated :class:`~cesard.metadata.model.ARDMetadata` object.
     target:
         A path pointing to the root directory of a product scene.
     nsmap:
@@ -135,7 +117,6 @@ def source_xml(
     exist_ok:
         Do not create files if they already exist?
     """
-    meta = _as_model(meta)
     metadir = os.path.join(target, 'source')
     for uid, source in meta.sources.items():
         scene = os.path.basename(source.filename).split('.')[0]
@@ -418,7 +399,7 @@ def source_xml(
 
 
 def product_xml(
-        meta: MetadataInput,
+        meta: ARDMetadata,
         target: str,
         assets: list[str],
         nsmap: dict[str, str],
@@ -431,9 +412,7 @@ def product_xml(
     Parameters
     ----------
     meta:
-        Validated :class:`~cesard.metadata.model.ARDMetadata` or a legacy
-        ``common/prod/source`` metadata dictionary. Legacy dictionaries are
-        converted and validated with :meth:`ARDMetadata.from_legacy`.
+        A validated :class:`~cesard.metadata.model.ARDMetadata` object.
     target:
         A path pointing to the root directory of a product scene.
     assets:
@@ -445,7 +424,6 @@ def product_xml(
     exist_ok:
         Do not create files if they already exist?
     """
-    meta = _as_model(meta)
     scene_id = os.path.basename(target)
     outname = os.path.join(target, '{}.xml'.format(scene_id))
     if os.path.isfile(outname) and exist_ok:
@@ -831,7 +809,7 @@ def _om_procedure(
         nsmap: dict[str, str],
         ard_ns: str,
         scene_id: str,
-        meta: MetadataInput,
+        meta: ARDMetadata,
         uid: str | None = None,
         prod: bool = True
 ) -> None:
@@ -850,9 +828,7 @@ def _om_procedure(
     scene_id: str
         Scene basename.
     meta:
-        Validated :class:`~cesard.metadata.model.ARDMetadata` or a legacy
-        ``common/prod/source`` metadata dictionary. Legacy dictionaries are
-        converted and validated with :meth:`ARDMetadata.from_legacy`.
+        A validated :class:`~cesard.metadata.model.ARDMetadata` object.
     uid:
         Unique identifier of a source SLC scene.
     prod:
@@ -860,7 +836,6 @@ def _om_procedure(
         Default is True. If False, the XML subelements for further usage in the :func:`~cesard.metadata.xml.source_xml`
         parsing function will be returned.
     """
-    meta = _as_model(meta)
     source = None
     if not prod:
         if uid is None:
