@@ -1367,12 +1367,14 @@
           "type": "string"
         },
         "window_size_col": {
+          "exclusiveMinimum": 0,
           "title": "Window Size Col",
-          "type": "string"
+          "type": "integer"
         },
         "window_size_line": {
+          "exclusiveMinimum": 0,
           "title": "Window Size Line",
-          "type": "string"
+          "type": "integer"
         }
       },
       "required": [

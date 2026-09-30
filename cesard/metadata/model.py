@@ -310,6 +310,13 @@ class WindNormalizationMetadata(MetadataModel):
     reference_type: Literal["sigma0-ref"] | None
 
 
+class SpeckleFilterMetadata(MetadataModel):
+    model_config = ConfigDict(extra='allow')
+    type: str
+    window_size_col: PositiveInt
+    window_size_line: PositiveInt
+
+
 class ProductMetadata(MetadataModel):
     """Metadata describing the generated ARD product."""
     
@@ -365,13 +372,6 @@ class SwathAxisMetadata(MetadataModel):
     number_of_looks: dict[str, ARDPositiveInteger]
     pixel_spacing: dict[str, ARDPositiveNumber]
     resolution: dict[str, ARDPositiveNumber]
-
-
-class SpeckleFilterMetadata(MetadataModel):
-    model_config = ConfigDict(extra='allow')
-    type: str
-    window_size_col: str
-    window_size_line: str
 
 
 class IncidenceAngleMetadata(MetadataModel):
