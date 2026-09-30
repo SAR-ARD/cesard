@@ -304,12 +304,12 @@ class GridMetadata(MetadataModel):
 class WindNormalizationMetadata(MetadataModel):
     """Optional wind-normalization metadata used by ocean radar backscatter."""
     
-    backscatter_measurement: Literal["sigma0"] | None
-    backscatter_convention: Literal["intensity ratio"] | None
-    reference_direction: float | None
-    reference_model: ARDText | None
-    reference_speed: float | None = Field(ge=0)
-    reference_type: Literal["sigma0-ref"] | None
+    backscatter_measurement: Literal["sigma0"]
+    backscatter_convention: Literal["intensity ratio"]
+    reference_direction: float
+    reference_model: ARDText
+    reference_speed: NonNegativeFloat
+    reference_type: Literal["sigma0-ref"]
 
 
 class SpeckleFilterMetadata(MetadataModel):

@@ -1449,73 +1449,31 @@
       "description": "Optional wind-normalization metadata used by ocean radar backscatter.",
       "properties": {
         "backscatter_measurement": {
-          "anyOf": [
-            {
-              "const": "sigma0",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Backscatter Measurement"
+          "const": "sigma0",
+          "title": "Backscatter Measurement",
+          "type": "string"
         },
         "backscatter_convention": {
-          "anyOf": [
-            {
-              "const": "intensity ratio",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Backscatter Convention"
+          "const": "intensity ratio",
+          "title": "Backscatter Convention",
+          "type": "string"
         },
         "reference_direction": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Reference Direction"
+          "title": "Reference Direction",
+          "type": "number"
         },
         "reference_model": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/ARDText"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/$defs/ARDText"
         },
         "reference_speed": {
-          "anyOf": [
-            {
-              "minimum": 0,
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Reference Speed"
+          "minimum": 0,
+          "title": "Reference Speed",
+          "type": "number"
         },
         "reference_type": {
-          "anyOf": [
-            {
-              "const": "sigma0-ref",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Reference Type"
+          "const": "sigma0-ref",
+          "title": "Reference Type",
+          "type": "string"
         }
       },
       "required": [
