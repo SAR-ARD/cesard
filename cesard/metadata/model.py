@@ -178,7 +178,7 @@ class GroundSamplingDistance(MetadataModel):
     """Ground sampling distance with an explicit unit."""
     
     value: float = Field(gt=0)
-    unit: Literal["m"] = "m"
+    unit: Literal["m", "arcsec"]
 
 
 class DEMMetadata(MetadataModel):

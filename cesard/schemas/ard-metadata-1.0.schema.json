@@ -586,14 +586,17 @@
           "type": "number"
         },
         "unit": {
-          "const": "m",
-          "default": "m",
+          "enum": [
+            "m",
+            "arcsec"
+          ],
           "title": "Unit",
           "type": "string"
         }
       },
       "required": [
-        "value"
+        "value",
+        "unit"
       ],
       "title": "GroundSamplingDistance",
       "type": "object"
