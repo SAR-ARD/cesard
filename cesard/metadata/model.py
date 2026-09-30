@@ -271,6 +271,18 @@ class NoiseRemovalMetadata(MetadataModel):
     
     applied: bool
     algorithm: ARDText | None = None
+    
+    @model_validator(mode='after')
+    def validate_tnr(self) -> Self:
+        if self.applied and self.algorithm is None:
+            raise ValueError(
+                'if thermal noise removal is applied, an algorithm must be specified'
+            )
+        if not self.applied and self.algorithm is not None:
+            raise ValueError(
+                'if thermal noise removal is not applied, no algorithm may be specified'
+            )
+        return self
 
 
 class BackscatterMetadata(MetadataModel):
