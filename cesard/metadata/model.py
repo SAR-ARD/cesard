@@ -8,9 +8,8 @@ asard should return :class:`ARDMetadata` rather than a free-form dictionary.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Literal, Mapping, Self
+from typing import Any, Literal, Self, get_args, get_origin
 
 from pydantic import (
     AwareDatetime,
@@ -862,8 +861,8 @@ class ARDMetadata(MetadataModel):
         },
     )
     
-    schema_version: Literal["1.0"] = Field(
-        default="1.0",
+    schema_version: Literal["1.0.0"] = Field(
+        default="1.0.0",  # so that it does not have to be supplied when model is constructed
         description="Version of the CESARD ARDMetadata interface schema used by this metadata object.",
     )
     common: CommonMetadata = Field(
@@ -884,10 +883,31 @@ class ARDMetadata(MetadataModel):
         return self
     
     @classmethod
-    def write_json_schema(cls, path: str | Path) -> None:
-        """Write the model's JSON Schema to *path*."""
-        path = Path(path)
-        path.parent.mkdir(parents=True, exist_ok=True)
+    def get_schema_version(cls) -> str:
+        """Return the ARD metadata schema version."""
+        annotation = cls.model_fields["schema_version"].annotation
+        versions = get_args(annotation)
+        
+        if get_origin(annotation) is not Literal or len(versions) != 1:
+            raise TypeError("'schema_version' must be a Literal with exactly one value")
+        
+        return versions[0]
+    
+    @classmethod
+    def get_schema_path(cls) -> Path:
+        return (
+                Path(__file__).parent
+                / "schemas"
+                / f"ard-metadata-{cls.get_schema_version()}.schema.json"
+        )
+    
+    @classmethod
+    def write_json_schema(cls) -> None:
+        """Write the model's versioned JSON Schema."""
+        path = cls.get_schema_path()
+        if path.exists():
+            raise FileExistsError(f"Schema file already exists: {path}."
+                                  f"Consider updating the schema version.")
         path.write_text(
             json.dumps(cls.model_json_schema(), indent=2) + "\n",
             encoding="utf-8",

@@ -1644,8 +1644,8 @@
   "description": "Canonical metadata transfer object for CESARD STAC and XML writers.",
   "properties": {
     "schema_version": {
-      "const": "1.0",
-      "default": "1.0",
+      "const": "1.0.0",
+      "default": "1.0.0",
       "description": "Version of the CESARD ARDMetadata interface schema used by this metadata object.",
       "title": "Schema Version",
       "type": "string"
