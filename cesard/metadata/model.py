@@ -418,9 +418,8 @@ class BackscatterMetadata(MetadataModel):
             "generated product."
         ),
     )
-    equivalent_number_of_looks: float | None = Field(
+    equivalent_number_of_looks: ARDPositiveNumber | None = Field(
         default=None,
-        gt=0,
         description="Equivalent Number of Looks (ENL), describing the effective number of independent looks represented by the product.",
     )
 
@@ -668,9 +667,8 @@ class SourcePerformanceMetadata(MetadataModel):
     estimates: dict[Polarization, PerformanceEstimate] = Field(
         description="Noise-equivalent intensity statistics for each available polarization channel."
     )
-    equivalent_number_of_looks: float | None = Field(
+    equivalent_number_of_looks: ARDPositiveNumber | None = Field(
         default=None,
-        gt=0,
         description="Equivalent Number of Looks (ENL) of the source data, describing its effective number of independent looks.",
     )
     integrated_side_lobe_ratio: float | None = Field(
