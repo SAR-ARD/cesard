@@ -900,10 +900,10 @@ class ARDMetadata(MetadataModel):
         )
     
     @classmethod
-    def write_json_schema(cls) -> None:
+    def write_json_schema(cls, overwrite=False) -> None:
         """Write the model's versioned JSON Schema."""
         path = cls.get_schema_path()
-        if path.exists():
+        if path.exists() and not overwrite:
             raise FileExistsError(f"Schema file already exists: {path}."
                                   f"Consider updating the schema version.")
         path.write_text(
