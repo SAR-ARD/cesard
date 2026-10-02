@@ -10,6 +10,7 @@ dependencies:
   - numpy
   - pandas
   - pip
+  - pydantic>2
   - pyproj
   - pyroSAR>=0.39.0
   - pystac>=1.8.0,<1.11.0
