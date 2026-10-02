@@ -108,7 +108,9 @@ URL = {
         'sentinel-1a': 'https://database.eohandbook.com/database/missionsummary.aspx?missionID=575',
         'sentinel-1b': 'https://database.eohandbook.com/database/missionsummary.aspx?missionID=576',
         'sentinel-1c': 'https://database.eohandbook.com/database/missionsummary.aspx?missionID=577',
-        'sentinel-1d': 'https://database.eohandbook.com/database/missionsummary.aspx?missionID=814'
+        'sentinel-1d': 'https://database.eohandbook.com/database/missionsummary.aspx?missionID=814',
+        'tandem-x': 'https://database.eohandbook.com/database/missionsummary.aspx?missionID=598',
+        'terrasar-x': 'https://database.eohandbook.com/database/missionsummary.aspx?missionID=391',
     }
 }
 
