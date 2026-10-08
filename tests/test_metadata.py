@@ -1,7 +1,10 @@
 import pytest
+from pathlib import Path
+import json
 from spatialist.vector import bbox
 
 from cesard.metadata.extract import geometry_from_vec
+from cesard.metadata.model import ARDMetadata
 
 
 @pytest.mark.parametrize(
@@ -87,3 +90,9 @@ def test_geometry_from_vec(
         assert 'bbox_native' not in result
     else:
         assert result['bbox_native'] == expected_bbox_native
+
+
+def test_metadata_schema_is_current():
+    expected = ARDMetadata.model_json_schema()
+    actual = json.loads(ARDMetadata.get_schema_path().read_text())
+    assert actual == expected

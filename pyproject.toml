@@ -4,7 +4,7 @@ requires = ["setuptools>=45", "setuptools_scm[toml]>=6.2", "wheel"]
 [project]
 name = "cesard"
 description = "Central functionalities for creating Synthetic Aperture Radar (SAR) Analysis Ready Data (ARD) products"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 license = { file = "LICENSE.txt" }
 maintainers = [
     { name = "John Truckenbrodt", email = "john.truckenbrodt@dlr.de" }

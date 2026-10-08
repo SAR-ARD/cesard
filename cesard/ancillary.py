@@ -14,7 +14,7 @@ from datetime import datetime, timedelta, timezone
 from osgeo import osr
 from pyproj import Geod
 import numpy as np
-import spatialist
+
 from spatialist.raster import Raster, rasterize
 from spatialist.vector import (bbox, intersect, hull,
                                vectorize, Vector)
@@ -239,12 +239,11 @@ def datamask(
     Create data masks for a given image file.
     The created raster data mask does not contain a simple mask of nodata values.
     Rather, a boundary vector geometry containing all valid pixels is created and
-    then rasterized. This boundary geometry (single polygon) is saved as `dm_vec`.
-    In this case `dm_vec` is returned.
+    then rasterized. This boundary geometry (single polygon) is saved as ``dm_vec``.
+    In this case ``dm_vec`` is returned.
     If the input image only contains nodata values, no raster data mask is created,
     and an empty dummy vector mask is created. In this case the function will return
-    `None`.
-
+    ``None``.
 
     Parameters
     ----------
@@ -257,22 +256,34 @@ def datamask(
 
     Returns
     -------
-        `dm_vec` if the vector data mask contains a geometry or None otherwise
+        ``dm_vec`` if the vector data mask contains a geometry or ``None`` otherwise
     """
+    log.debug(f'datamask measurement: {measurement}')
     
-    def mask_from_array(arr, dm_vec, dm_ras, ref):
+    def mask_from_array(
+            arr: np.ndarray,
+            dm_vec: str,
+            dm_ras: str,
+            ref: Raster
+    ) -> str | None:
         """
+        Create data masks from a binary input array.
 
         Parameters
         ----------
-        arr: np.ndarray
-        dm_vec: str
-        dm_ras: str
-        ref: spatialist.raster.Raster
+        arr
+            the binary input array
+        dm_vec
+            the name of the output vector data mask
+        dm_ras
+            the name of the output raster data mask
+        ref
+            the reference raster object for ``dm_ras``
 
         Returns
         -------
-        str or None
+            The name of the output vector data mask or ``None``
+            if ``arr`` does not contain any valid values.
         """
         # create a dummy vector mask if the mask only contains 0 values
         if len(arr[arr == 1]) == 0:
@@ -419,7 +430,7 @@ def get_kml() -> str:
     -------
         the path to the KML file
     """
-    remote = URL['ancillaryData_KML']
+    remote = URL['grid_definition']
     local_path = os.path.join(os.path.expanduser('~'), '.cesard')
     os.makedirs(local_path, exist_ok=True)
     local = os.path.join(local_path, os.path.basename(remote).replace('.zip', '.kml'))

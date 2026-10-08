@@ -5,7 +5,7 @@ from datetime import datetime
 from spatialist import Raster
 from spatialist.vector import Vector
 from osgeo import gdal, ogr
-from typing import Any, TypedDict, NotRequired
+from typing import Any, TypedDict, NotRequired, Literal
 
 gdal.UseExceptions()
 
@@ -215,7 +215,7 @@ def calc_enl(
 def calc_performance_estimates(
         files: list[str],
         decimals: int = 2
-):
+) -> dict[Literal['HH', 'HV', 'VH', 'VV'], dict[Literal['minimum', 'maximum', 'mean'], float]]:
     """
     Calculates the performance estimates specified in CARD4L NRB 1.6.9 for all noise power images if available.
     
@@ -228,7 +228,6 @@ def calc_performance_estimates(
     
     Returns
     -------
-    out: dict
         Dictionary containing the calculated estimates for each available polarization.
     """
     out = {}

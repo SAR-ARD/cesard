@@ -4,6 +4,41 @@ from osgeo import gdal
 import spatialist
 import pyroSAR
 import cesard
+from datetime import datetime
+from dateutil.parser import parse as dateparse
+
+from typing import Any, Literal
+
+
+def gdal_conf(
+        config: dict[str, Any]
+) -> dict[Literal['threads', 'threads_before', 'multithread'], Any]:
+    """
+    Stores GDAL configuration options for the current process.
+
+    Parameters
+    ----------
+    config
+        Dictionary of the parsed config parameters for the current process.
+
+    Returns
+    -------
+        Dictionary containing GDAL configuration options for the current process.
+    """
+    threads = config['processing']['gdal_threads']
+    threads_before = gdal.GetConfigOption('GDAL_NUM_THREADS')
+    if not isinstance(threads, int):
+        raise TypeError("'threads' must be of type int")
+    if threads == 1:
+        multithread = False
+    elif threads > 1:
+        multithread = True
+        gdal.SetConfigOption('GDAL_NUM_THREADS', str(threads))
+    else:
+        raise ValueError("'threads' must be >= 1")
+    
+    return {'threads': threads, 'threads_before': threads_before,
+            'multithread': multithread}
 
 
 def keyval_check(
@@ -33,9 +68,28 @@ def keyval_check(
     return val
 
 
+def parse_datetime(
+        s: str
+) -> datetime:
+    """Custom converter for configparser:
+    https://docs.python.org/3/library/configparser.html#customizing-parser-behaviour"""
+    return dateparse(s)
+
+
+def parse_list(
+        s: str
+) -> list[str] | None:
+    """Custom converter for configparser:
+    https://docs.python.org/3/library/configparser.html#customizing-parser-behaviour"""
+    if s in ['', 'None']:
+        return None
+    else:
+        return [x.strip() for x in s.split(',')]
+
+
 def validate_options(
         k: str,
-        v: str,
+        v: Any,
         options: dict[str, list[str]]
 ) -> None:
     """
@@ -43,16 +97,12 @@ def validate_options(
     
     Parameters
     ----------
-    k:
+    k
         the configuration key
-    v:
-        the configuration value
+    v
+        the configuration value(s)
     options:
         the configuration options
-
-    Returns
-    -------
-
     """
     if k not in options:
         return
@@ -73,13 +123,15 @@ def validate_value(
     
     Parameters
     ----------
-    k:
+    k
         the configuration key
-    v:
+    v
         the configuration value
 
-    Returns
-    -------
+    Raises
+    ------
+    ValueError
+        if the value is invalid
 
     """
     

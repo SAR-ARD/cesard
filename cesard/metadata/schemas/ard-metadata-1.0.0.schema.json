@@ -1,0 +1,1674 @@
+{
+  "$comment": "Reserved CESARD implementation markers: NOT_IMPLEMENTED_NUMBER = -99999; NOT_IMPLEMENTED_TEXT = 'TBD'. These values denote mandatory metadata whose derivation is not yet implemented and are distinct from null/None.",
+  "$defs": {
+    "ARDNonNegativeNumber": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "$ref": "#/$defs/NotImplementedNumber"
+        }
+      ]
+    },
+    "ARDNumber": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "$ref": "#/$defs/NotImplementedNumber"
+        }
+      ]
+    },
+    "ARDPositiveInteger": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "type": "integer"
+        },
+        {
+          "$ref": "#/$defs/NotImplementedNumber"
+        }
+      ]
+    },
+    "ARDPositiveNumber": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        {
+          "$ref": "#/$defs/NotImplementedNumber"
+        }
+      ]
+    },
+    "ARDText": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "$ref": "#/$defs/NotImplementedText"
+        }
+      ]
+    },
+    "AxisAccuracy": {
+      "additionalProperties": false,
+      "description": "Bias and standard deviation along one horizontal axis.",
+      "properties": {
+        "bias": {
+          "$ref": "#/$defs/ARDNumber",
+          "description": "Estimated systematic component (bias) of the absolute localisation error along this coordinate axis, in metres."
+        },
+        "standard_deviation": {
+          "$ref": "#/$defs/ARDNonNegativeNumber",
+          "description": "Estimated standard deviation of the absolute localisation error along this coordinate axis, in metres."
+        }
+      },
+      "required": [
+        "bias",
+        "standard_deviation"
+      ],
+      "title": "AxisAccuracy",
+      "type": "object"
+    },
+    "BackscatterMetadata": {
+      "additionalProperties": false,
+      "description": "Backscatter measurement representation and multilooking metadata.",
+      "properties": {
+        "measurement": {
+          "description": "Backscatter coefficient represented by the measurement assets, for example sigma nought (sigma0) or gamma nought (gamma0).",
+          "enum": [
+            "sigma0",
+            "gamma0"
+          ],
+          "title": "Measurement",
+          "type": "string"
+        },
+        "convention": {
+          "const": "linear power",
+          "description": "Numerical convention used to encode backscatter measurements; 'linear power' stores backscatter intensity on a linear scale.",
+          "title": "Convention",
+          "type": "string"
+        },
+        "conversion_equation": {
+          "const": "10*log10(DN)",
+          "description": "Equation used to convert linear backscatter values (DN) to logarithmic decibel values.",
+          "title": "Conversion Equation",
+          "type": "string"
+        },
+        "range_number_of_looks": {
+          "description": "Number of statistically combined looks in the range direction for the generated product.",
+          "exclusiveMinimum": 0,
+          "title": "Range Number Of Looks",
+          "type": "number"
+        },
+        "azimuth_number_of_looks": {
+          "description": "Number of statistically combined looks in the azimuth direction for the generated product.",
+          "exclusiveMinimum": 0,
+          "title": "Azimuth Number Of Looks",
+          "type": "number"
+        },
+        "equivalent_number_of_looks": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ARDPositiveNumber"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Equivalent Number of Looks (ENL), describing the effective number of independent looks represented by the product."
+        }
+      },
+      "required": [
+        "measurement",
+        "convention",
+        "conversion_equation",
+        "range_number_of_looks",
+        "azimuth_number_of_looks"
+      ],
+      "title": "BackscatterMetadata",
+      "type": "object"
+    },
+    "Card4lMetadata": {
+      "additionalProperties": false,
+      "description": "Reference to the applicable CARD4L product-family specification.",
+      "properties": {
+        "specification": {
+          "description": "Short identifier of the CEOS Analysis Ready Data product family specification implemented by the product.",
+          "enum": [
+            "NRB",
+            "ORB"
+          ],
+          "title": "Specification",
+          "type": "string"
+        },
+        "version": {
+          "$ref": "#/$defs/ARDText",
+          "description": "Version of the implemented CEOS CARD4L product family specification."
+        },
+        "document": {
+          "$ref": "#/$defs/ARDText",
+          "description": "URL or DOI referencing the implemented CEOS CARD4L Radar Backscatter product family specification."
+        }
+      },
+      "required": [
+        "specification",
+        "version",
+        "document"
+      ],
+      "title": "Card4lMetadata",
+      "type": "object"
+    },
+    "CommonMetadata": {
+      "additionalProperties": false,
+      "description": "Metadata shared by the ARD product and all contributing source scenes.",
+      "properties": {
+        "antenna_look_direction": {
+          "description": "Side of the satellite ground track illuminated by the SAR antenna, expressed as LEFT or RIGHT relative to flight direction.",
+          "enum": [
+            "LEFT",
+            "RIGHT"
+          ],
+          "title": "Antenna Look Direction",
+          "type": "string"
+        },
+        "constellation": {
+          "$ref": "#/$defs/ARDText",
+          "description": "Name of the satellite constellation to which the platform belongs, where applicable."
+        },
+        "instrument_short_name": {
+          "$ref": "#/$defs/ARDText",
+          "description": "Short name of the SAR instrument that acquired the source data."
+        },
+        "operational_mode": {
+          "$ref": "#/$defs/ARDText",
+          "description": "Instrument acquisition mode used to collect the source data."
+        },
+        "orbit_direction": {
+          "description": "Direction of the platform ground track during acquisition: ascending or descending.",
+          "enum": [
+            "ascending",
+            "descending"
+          ],
+          "title": "Orbit Direction",
+          "type": "string"
+        },
+        "orbit_mean_altitude": {
+          "description": "Mean platform altitude during the acquisition, in metres.",
+          "exclusiveMinimum": 0,
+          "title": "Orbit Mean Altitude",
+          "type": "number"
+        },
+        "orbit_number_absolute": {
+          "description": "Absolute orbit number of the acquisition.",
+          "minimum": 0,
+          "title": "Orbit Number Absolute",
+          "type": "integer"
+        },
+        "orbit_number_relative": {
+          "description": "Relative orbit or track number of the acquisition.",
+          "minimum": 0,
+          "title": "Orbit Number Relative",
+          "type": "integer"
+        },
+        "platform_full_name": {
+          "$ref": "#/$defs/ARDText",
+          "description": "Full name of the satellite platform."
+        },
+        "platform_identifier": {
+          "$ref": "#/$defs/ARDText",
+          "description": "Platform serial identifier distinguishing a specific satellite within a mission or constellation."
+        },
+        "platform_reference": {
+          "$ref": "#/$defs/ARDText",
+          "description": "Reference to the CEOS Missions, Instruments and Measurements database record describing the satellite mission."
+        },
+        "platform_short_name": {
+          "$ref": "#/$defs/ARDText",
+          "description": "Short mission or platform name used by the source metadata convention."
+        },
+        "polarizations": {
+          "description": "Transmit/receive polarization channels contained in the acquisition, such as HH, HV, VH or VV.",
+          "items": {
+            "enum": [
+              "HH",
+              "HV",
+              "VH",
+              "VV"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Polarizations",
+          "type": "array"
+        },
+        "polarization_mode": {
+          "$ref": "#/$defs/ARDText",
+          "description": "Polarization acquisition mode describing the channel configuration of the SAR acquisition."
+        },
+        "processing_level": {
+          "const": "L1C",
+          "description": "Processing level assigned to the source data used to generate the ARD product.",
+          "title": "Processing Level",
+          "type": "string"
+        },
+        "radar_band": {
+          "description": "Common name of the radar frequency band used by the instrument, such as X, C or L band.",
+          "enum": [
+            "X",
+            "C",
+            "L"
+          ],
+          "title": "Radar Band",
+          "type": "string"
+        },
+        "radar_center_frequency": {
+          "description": "Radar centre frequency of the instrument, in hertz.",
+          "exclusiveMinimum": 0,
+          "title": "Radar Center Frequency",
+          "type": "number"
+        },
+        "sensor_type": {
+          "const": "RADAR",
+          "description": "Type of remote-sensing instrument; RADAR for the SAR products represented by this model.",
+          "title": "Sensor Type",
+          "type": "string"
+        },
+        "swath_identifier": {
+          "$ref": "#/$defs/ARDText",
+          "description": "Identifier of the acquisition swath or beam."
+        },
+        "wrs_longitude_grid": {
+          "description": "Longitude-grid identifier of the reference system used to locate the acquisition, equivalent to a track-like identifier.",
+          "minimum": 0,
+          "title": "Wrs Longitude Grid",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "antenna_look_direction",
+        "constellation",
+        "instrument_short_name",
+        "operational_mode",
+        "orbit_direction",
+        "orbit_mean_altitude",
+        "orbit_number_absolute",
+        "orbit_number_relative",
+        "platform_full_name",
+        "platform_identifier",
+        "platform_reference",
+        "platform_short_name",
+        "polarizations",
+        "polarization_mode",
+        "processing_level",
+        "radar_band",
+        "radar_center_frequency",
+        "sensor_type",
+        "swath_identifier",
+        "wrs_longitude_grid"
+      ],
+      "title": "CommonMetadata",
+      "type": "object"
+    },
+    "CompressionMetadata": {
+      "additionalProperties": false,
+      "description": "Compression configuration used for product raster assets.",
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/ARDText",
+          "description": "Compression algorithm or codec applied to product raster assets."
+        },
+        "z_errors": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Maximum permitted compression error for applicable assets, represented as a mapping from asset identifier to MAX_Z_ERROR. A value of 0 denotes lossless LERC compression.",
+          "title": "Z Errors",
+          "type": "object"
+        }
+      },
+      "required": [
+        "type",
+        "z_errors"
+      ],
+      "title": "CompressionMetadata",
+      "type": "object"
+    },
+    "DEMMetadata": {
+      "additionalProperties": false,
+      "description": "Digital elevation model and Earth gravitational model metadata.",
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/ARDText",
+          "description": "Human-readable name of the digital elevation or surface model used for geometric and radiometric terrain processing."
+        },
+        "type": {
+          "description": "Type of terrain-height model used during processing: an elevation model representing terrain height or a surface model including surface objects.",
+          "enum": [
+            "surface",
+            "elevation"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "reference": {
+          "$ref": "#/$defs/ARDText",
+          "description": "URL, DOI or other persistent reference identifying the digital elevation or surface model used for terrain correction."
+        },
+        "access": {
+          "$ref": "#/$defs/ARDText",
+          "description": "Location from which the digital elevation or surface model used for processing can be accessed."
+        },
+        "gsd": {
+          "$ref": "#/$defs/GroundSamplingDistance",
+          "description": "Native ground sampling distance of the digital elevation or surface model used during processing."
+        },
+        "resampling_method": {
+          "$ref": "#/$defs/ARDText",
+          "description": "Resampling method used to prepare the digital elevation or surface model for geometric and radiometric processing."
+        },
+        "egm_reference": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ARDText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "URL, DOI or other persistent reference identifying the Earth Gravitational Model used to relate elevation-model heights to the required vertical reference."
+        },
+        "egm_resampling_method": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ARDText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Resampling method used when preparing the Earth Gravitational Model for processing."
+        }
+      },
+      "required": [
+        "name",
+        "type",
+        "reference",
+        "access",
+        "gsd",
+        "resampling_method",
+        "egm_reference",
+        "egm_resampling_method"
+      ],
+      "title": "DEMMetadata",
+      "type": "object"
+    },
+    "GeometricAccuracyMetadata": {
+      "additionalProperties": false,
+      "description": "Horizontal geolocation accuracy metadata.",
+      "properties": {
+        "type": {
+          "description": "Coordinate frame in which geometric accuracy is reported: 'gtc' uses northern/eastern axes for the geocoded terrain-corrected product, whereas 'slant-range' uses line/sample directions of the radar geometry.",
+          "enum": [
+            "gtc",
+            "slant-range"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "eastern": {
+          "$ref": "#/$defs/AxisAccuracy",
+          "description": "Absolute localisation error statistics for the eastern axis when type='gtc', or the sample/range axis when type='slant-range'."
+        },
+        "northern": {
+          "$ref": "#/$defs/AxisAccuracy",
+          "description": "Absolute localisation error statistics for the northern axis when type='gtc', or the line/azimuth axis when type='slant-range'."
+        },
+        "radial_rmse": {
+          "$ref": "#/$defs/ARDNonNegativeNumber",
+          "description": "Radial root mean square error (rRMSE) summarising the horizontal absolute localisation error of the output product, in metres."
+        },
+        "reference": {
+          "$ref": "#/$defs/ARDText",
+          "description": "URL or DOI referencing documentation or calibration/validation results used to derive the absolute localisation accuracy estimate."
+        }
+      },
+      "required": [
+        "type",
+        "eastern",
+        "northern",
+        "radial_rmse",
+        "reference"
+      ],
+      "title": "GeometricAccuracyMetadata",
+      "type": "object"
+    },
+    "GeometricCorrectionMetadata": {
+      "additionalProperties": false,
+      "description": "Geometric correction algorithm and resulting accuracy.",
+      "properties": {
+        "algorithm": {
+          "$ref": "#/$defs/ARDText",
+          "description": "URL or DOI referencing the algorithm or technical documentation used for geometric terrain correction and geolocation."
+        },
+        "resampling_method": {
+          "$ref": "#/$defs/ARDText",
+          "description": "Resampling method used when geometrically correcting and resampling the source measurements to the output grid."
+        },
+        "accuracy": {
+          "$ref": "#/$defs/GeometricAccuracyMetadata",
+          "description": "Estimated absolute localisation accuracy of the geometrically corrected output product."
+        }
+      },
+      "required": [
+        "algorithm",
+        "resampling_method",
+        "accuracy"
+      ],
+      "title": "GeometricCorrectionMetadata",
+      "type": "object"
+    },
+    "GeometryMetadata": {
+      "additionalProperties": false,
+      "description": "Spatial footprint metadata in EPSG:4326 and, optionally, native CRS.",
+      "properties": {
+        "bbox": {
+          "description": "WGS 84 bounding box of the footprint as (west, south, east, north), in longitude and latitude degrees. For footprints crossing the antimeridian, west may be greater than east.",
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Bbox",
+          "type": "array"
+        },
+        "bbox_native": {
+          "anyOf": [
+            {
+              "maxItems": 4,
+              "minItems": 4,
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Bounding box of the product footprint in the product's native coordinate reference system, ordered as (xmin, ymin, xmax, ymax).",
+          "title": "Bbox Native"
+        },
+        "geometry": {
+          "additionalProperties": true,
+          "description": "Acquisition footprint as a GeoJSON Polygon or MultiPolygon in WGS 84 (EPSG:4326). GeoJSON coordinates are ordered as longitude, latitude pairs; polygon rings are closed.",
+          "title": "Geometry",
+          "type": "object"
+        }
+      },
+      "required": [
+        "bbox",
+        "geometry"
+      ],
+      "title": "GeometryMetadata",
+      "type": "object"
+    },
+    "GridMetadata": {
+      "additionalProperties": false,
+      "description": "Raster grid, CRS and MGRS metadata for the ARD product.",
+      "properties": {
+        "epsg": {
+          "description": "EPSG code of the native coordinate reference system used by the ARD product grid.",
+          "exclusiveMinimum": 0,
+          "title": "Epsg",
+          "type": "integer"
+        },
+        "wkt": {
+          "$ref": "#/$defs/ARDText",
+          "description": "Well-Known Text representation of the native coordinate reference system used by the ARD product grid."
+        },
+        "rows": {
+          "description": "Number of raster rows (lines) in the default product grid.",
+          "exclusiveMinimum": 0,
+          "title": "Rows",
+          "type": "integer"
+        },
+        "columns": {
+          "description": "Number of raster columns (pixels per line) in the default product grid.",
+          "exclusiveMinimum": 0,
+          "title": "Columns",
+          "type": "integer"
+        },
+        "pixel_spacing_row": {
+          "description": "Sampling distance between adjacent raster rows in the native coordinate reference system.",
+          "exclusiveMinimum": 0,
+          "title": "Pixel Spacing Row",
+          "type": "number"
+        },
+        "pixel_spacing_column": {
+          "description": "Sampling distance between adjacent raster columns in the native coordinate reference system.",
+          "exclusiveMinimum": 0,
+          "title": "Pixel Spacing Column",
+          "type": "number"
+        },
+        "transform": {
+          "description": "Affine transformation coefficients mapping pixel coordinates of the default raster grid to coordinates in the native CRS.",
+          "maxItems": 6,
+          "minItems": 6,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Transform",
+          "type": "array"
+        },
+        "mgrs_id": {
+          "$ref": "#/$defs/ARDText",
+          "description": "Military Grid Reference System (MGRS) tile identifier of the product. The identifier combines UTM zone, latitude band and 100 km grid square."
+        },
+        "pixel_coordinate_convention": {
+          "const": "upper-left",
+          "description": "Location within a raster pixel to which the grid coordinates refer; this model currently uses the upper-left pixel corner.",
+          "title": "Pixel Coordinate Convention",
+          "type": "string"
+        },
+        "number_of_border_pixels": {
+          "description": "Number of no-data border pixels surrounding a backscatter measurement raster, if present.",
+          "minimum": 0,
+          "title": "Number Of Border Pixels",
+          "type": "integer"
+        },
+        "definition_reference": {
+          "$ref": "#/$defs/ARDText",
+          "description": "URL or other persistent reference describing the grid or tiling-system definition used for the product."
+        },
+        "convention_reference": {
+          "$ref": "#/$defs/ARDText",
+          "description": "Description, URL or DOI identifying the gridding convention used to align products to a consistent sampling frame."
+        }
+      },
+      "required": [
+        "epsg",
+        "wkt",
+        "rows",
+        "columns",
+        "pixel_spacing_row",
+        "pixel_spacing_column",
+        "transform",
+        "mgrs_id",
+        "pixel_coordinate_convention",
+        "number_of_border_pixels",
+        "definition_reference",
+        "convention_reference"
+      ],
+      "title": "GridMetadata",
+      "type": "object"
+    },
+    "GroundSamplingDistance": {
+      "additionalProperties": false,
+      "description": "Ground sampling distance with an explicit unit.",
+      "properties": {
+        "value": {
+          "description": "Ground sampling distance of the elevation model in the unit given by 'unit'.",
+          "exclusiveMinimum": 0,
+          "title": "Value",
+          "type": "number"
+        },
+        "unit": {
+          "description": "Unit in which the elevation-model ground sampling distance is expressed: metres or arc-seconds.",
+          "enum": [
+            "m",
+            "arcsec"
+          ],
+          "title": "Unit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "value",
+        "unit"
+      ],
+      "title": "GroundSamplingDistance",
+      "type": "object"
+    },
+    "IncidenceAngleMetadata": {
+      "additionalProperties": false,
+      "description": "Near-, mid- and far-range incidence angles in degrees.",
+      "properties": {
+        "minimum": {
+          "description": "Near-range incidence angle of the source acquisition, in degrees.",
+          "title": "Minimum",
+          "type": "number"
+        },
+        "maximum": {
+          "description": "Far-range incidence angle of the source acquisition, in degrees.",
+          "title": "Maximum",
+          "type": "number"
+        },
+        "mid_swath": {
+          "description": "Incidence angle at the centre of the source swath, in degrees.",
+          "title": "Mid Swath",
+          "type": "number"
+        }
+      },
+      "required": [
+        "minimum",
+        "maximum",
+        "mid_swath"
+      ],
+      "title": "IncidenceAngleMetadata",
+      "type": "object"
+    },
+    "NoiseRemovalMetadata": {
+      "additionalProperties": false,
+      "description": "Thermal-noise removal metadata.",
+      "properties": {
+        "applied": {
+          "description": "Whether noise removal was applied during processing of the backscatter measurements.",
+          "title": "Applied",
+          "type": "boolean"
+        },
+        "algorithm": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ARDText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "URL or DOI referencing the noise-removal algorithm when noise removal was applied; otherwise None."
+        }
+      },
+      "required": [
+        "applied"
+      ],
+      "title": "NoiseRemovalMetadata",
+      "type": "object"
+    },
+    "NotImplementedNumber": {
+      "const": -99999,
+      "type": "integer"
+    },
+    "NotImplementedText": {
+      "const": "TBD",
+      "type": "string"
+    },
+    "PerformanceEstimate": {
+      "additionalProperties": false,
+      "description": "Minimum, mean and maximum noise-equivalent intensity estimate.",
+      "properties": {
+        "minimum": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Minimum noise-equivalent backscatter intensity level for the corresponding polarization, in decibels.",
+          "title": "Minimum"
+        },
+        "mean": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Mean noise-equivalent backscatter intensity level for the corresponding polarization, in decibels.",
+          "title": "Mean"
+        },
+        "maximum": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Maximum noise-equivalent backscatter intensity level for the corresponding polarization, in decibels.",
+          "title": "Maximum"
+        }
+      },
+      "title": "PerformanceEstimate",
+      "type": "object"
+    },
+    "ProcessingMetadata": {
+      "additionalProperties": false,
+      "description": "Information about the processor that created a product or source scene.",
+      "properties": {
+        "facility": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ARDText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Name or code of the facility that processed the source data or generated the ARD product."
+        },
+        "date": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "UTC date and time at which the source data or ARD product was processed.",
+          "title": "Date"
+        },
+        "mode": {
+          "description": "Processing mode describing whether the processing configuration is nominal operational processing or a prototype.",
+          "enum": [
+            "PROTOTYPE",
+            "NOMINAL"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "processor": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ARDText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Name of the primary processor software used to generate the data."
+        },
+        "software": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Software used during processing, represented as a mapping from software name to version.",
+          "title": "Software",
+          "type": "object"
+        }
+      },
+      "required": [
+        "mode"
+      ],
+      "title": "ProcessingMetadata",
+      "type": "object"
+    },
+    "ProductMetadata": {
+      "additionalProperties": false,
+      "description": "Metadata describing the generated ARD product.",
+      "properties": {
+        "name": {
+          "description": "Human-readable name of the implemented CEOS CARD4L Radar Backscatter product family.",
+          "enum": [
+            "Normalised Radar Backscatter",
+            "Ocean Radar Backscatter"
+          ],
+          "title": "Name",
+          "type": "string"
+        },
+        "product_type": {
+          "description": "Short CARD4L product-family identifier: NRB for Normalised Radar Backscatter or ORB for Ocean Radar Backscatter.",
+          "enum": [
+            "NRB",
+            "ORB"
+          ],
+          "title": "Product Type",
+          "type": "string"
+        },
+        "acquisition_type": {
+          "description": "High-level classification of the acquisition as nominal data, calibration data or another acquisition type.",
+          "enum": [
+            "NOMINAL",
+            "CALIBRATION",
+            "OTHER"
+          ],
+          "title": "Acquisition Type",
+          "type": "string"
+        },
+        "status": {
+          "description": "Lifecycle or availability status assigned to the ARD product.",
+          "enum": [
+            "ARCHIVED",
+            "ACQUIRED",
+            "CANCELLED",
+            "FAILED",
+            "PLANNED",
+            "POTENTIAL",
+            "REJECTED",
+            "QUALITYDEGRADED"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "access": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ARDText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "URL or other location from which the ARD product can be retrieved."
+        },
+        "doi": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ARDText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Digital Object Identifier assigned to the ARD product, if available."
+        },
+        "license": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ARDText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "License or copyright identifier governing use and redistribution of the ARD product."
+        },
+        "time_start": {
+          "description": "UTC start time of the earliest source acquisition contributing to the ARD product.",
+          "format": "date-time",
+          "title": "Time Start",
+          "type": "string"
+        },
+        "time_stop": {
+          "description": "UTC end time of the latest source acquisition contributing to the ARD product.",
+          "format": "date-time",
+          "title": "Time Stop",
+          "type": "string"
+        },
+        "time_created": {
+          "description": "UTC date and time at which the ARD product was generated.",
+          "format": "date-time",
+          "title": "Time Created",
+          "type": "string"
+        },
+        "geometry": {
+          "$ref": "#/$defs/GeometryMetadata",
+          "description": "Spatial footprint and bounding-box metadata of the generated ARD product."
+        },
+        "grid": {
+          "$ref": "#/$defs/GridMetadata",
+          "description": "Dimensions, sampling, georeferencing, CRS and grid-convention metadata of the ARD product raster."
+        },
+        "processing": {
+          "$ref": "#/$defs/ProcessingMetadata",
+          "description": "Facility, software, processing date and processing mode used to generate the ARD product."
+        },
+        "card4l": {
+          "$ref": "#/$defs/Card4lMetadata",
+          "description": "Identification and reference of the CEOS CARD4L product family specification implemented by this product."
+        },
+        "compression": {
+          "$ref": "#/$defs/CompressionMetadata",
+          "description": "Compression method and associated error thresholds used for product raster assets."
+        },
+        "dem": {
+          "$ref": "#/$defs/DEMMetadata",
+          "description": "Digital elevation/surface model and Earth Gravitational Model metadata used for geometric and radiometric terrain processing."
+        },
+        "backscatter": {
+          "$ref": "#/$defs/BackscatterMetadata",
+          "description": "Definition of the backscatter quantity, numerical convention, dB conversion and effective multilooking of the product."
+        },
+        "geometric_correction": {
+          "$ref": "#/$defs/GeometricCorrectionMetadata",
+          "description": "Algorithm, resampling method and absolute localisation accuracy associated with geometric terrain correction."
+        },
+        "radiometric_accuracy": {
+          "$ref": "#/$defs/RadiometricAccuracyMetadata",
+          "description": "Absolute and relative accuracy estimates for the radiometrically terrain-corrected backscatter measurements."
+        },
+        "noise_removal": {
+          "$ref": "#/$defs/NoiseRemovalMetadata",
+          "description": "Whether noise removal was applied and, when applicable, the algorithm reference."
+        },
+        "rtc_algorithm": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ARDText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "URL or DOI referencing the radiometric terrain correction algorithm or its technical implementation documentation."
+        },
+        "number_of_acquisitions": {
+          "description": "Number of source acquisitions contributing to the generated ARD product.",
+          "exclusiveMinimum": 0,
+          "title": "Number Of Acquisitions",
+          "type": "integer"
+        },
+        "speckle_filter_applied": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SpeckleFilterMetadata"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Speckle-filter configuration if filtering was applied; None indicates that no speckle filter was applied."
+        },
+        "ellipsoidal_height": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ARDNumber"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Ellipsoidal height, in metres, used when deriving ellipsoidal incidence-angle information, if applicable."
+        },
+        "wind_normalization": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WindNormalizationMetadata"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Parameters defining the reference model and conditions used for wind normalization of ocean radar backscatter, if applicable."
+        }
+      },
+      "required": [
+        "name",
+        "product_type",
+        "acquisition_type",
+        "status",
+        "time_start",
+        "time_stop",
+        "time_created",
+        "geometry",
+        "grid",
+        "processing",
+        "card4l",
+        "compression",
+        "dem",
+        "backscatter",
+        "geometric_correction",
+        "radiometric_accuracy",
+        "noise_removal",
+        "number_of_acquisitions",
+        "speckle_filter_applied"
+      ],
+      "title": "ProductMetadata",
+      "type": "object"
+    },
+    "RadiometricAccuracyMetadata": {
+      "additionalProperties": false,
+      "description": "Absolute and relative radiometric accuracy.",
+      "properties": {
+        "absolute": {
+          "$ref": "#/$defs/ARDNumber",
+          "description": "Estimated absolute radiometric accuracy of the terrain-corrected backscatter measurements, in decibels."
+        },
+        "relative": {
+          "$ref": "#/$defs/ARDNumber",
+          "description": "Estimated relative radiometric accuracy of the terrain-corrected backscatter measurements, in decibels."
+        },
+        "reference": {
+          "$ref": "#/$defs/ARDText",
+          "description": "URL or DOI referencing documentation that describes the radiometric accuracy or uncertainty estimate and its traceability."
+        }
+      },
+      "required": [
+        "absolute",
+        "relative",
+        "reference"
+      ],
+      "title": "RadiometricAccuracyMetadata",
+      "type": "object"
+    },
+    "SourceMetadata": {
+      "additionalProperties": false,
+      "description": "Metadata describing one source product contributing to the ARD product.",
+      "properties": {
+        "filename": {
+          "$ref": "#/$defs/ARDText",
+          "description": "Identifier or filename of the source data product, without a file extension."
+        },
+        "product_type": {
+          "$ref": "#/$defs/ARDText",
+          "description": "Product type or processing level of the source SAR data."
+        },
+        "data_geometry": {
+          "description": "Radar geometry of the source image: slant-range or ground-range.",
+          "enum": [
+            "slant-range",
+            "ground-range"
+          ],
+          "title": "Data Geometry",
+          "type": "string"
+        },
+        "acquisition_type": {
+          "description": "High-level classification of the source acquisition as nominal data, calibration data or another acquisition type.",
+          "enum": [
+            "NOMINAL",
+            "CALIBRATION",
+            "OTHER"
+          ],
+          "title": "Acquisition Type",
+          "type": "string"
+        },
+        "status": {
+          "description": "Lifecycle or availability status assigned to the source product.",
+          "enum": [
+            "ARCHIVED",
+            "ACQUIRED",
+            "CANCELLED",
+            "FAILED",
+            "PLANNED",
+            "POTENTIAL",
+            "REJECTED",
+            "QUALITYDEGRADED"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "access": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ARDText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "URL, DOI or other location from which the source data product can be retrieved."
+        },
+        "doi": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ARDText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Digital Object Identifier assigned to the source data product, if available."
+        },
+        "time_start": {
+          "description": "UTC start time of the source-data acquisition.",
+          "format": "date-time",
+          "title": "Time Start",
+          "type": "string"
+        },
+        "time_stop": {
+          "description": "UTC end time of the source-data acquisition.",
+          "format": "date-time",
+          "title": "Time Stop",
+          "type": "string"
+        },
+        "geometry": {
+          "$ref": "#/$defs/GeometryMetadata",
+          "description": "WGS 84 footprint and bounding-box metadata of the source acquisition."
+        },
+        "processing": {
+          "$ref": "#/$defs/ProcessingMetadata",
+          "description": "Facility, software, processing date and processing mode associated with the source product."
+        },
+        "orbit": {
+          "$ref": "#/$defs/SourceOrbitMetadata",
+          "description": "Orbit timing, source and state-vector metadata used for processing the source acquisition."
+        },
+        "swaths": {
+          "description": "Identifiers of the swaths or beams represented by the source acquisition.",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Swaths",
+          "type": "array"
+        },
+        "azimuth": {
+          "$ref": "#/$defs/SwathAxisMetadata",
+          "description": "Look bandwidth, number of looks, pixel spacing and resolution along the azimuth direction, keyed by swath or beam."
+        },
+        "range": {
+          "$ref": "#/$defs/SwathAxisMetadata",
+          "description": "Look bandwidth, number of looks, pixel spacing and resolution along the range direction, keyed by swath or beam."
+        },
+        "incidence_angle": {
+          "$ref": "#/$defs/IncidenceAngleMetadata",
+          "description": "Near-range, centre-swath and far-range incidence angles of the source acquisition."
+        },
+        "instrument_azimuth_angle": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Mean platform heading or instrument azimuth angle during acquisition, in degrees clockwise from north.",
+          "title": "Instrument Azimuth Angle"
+        },
+        "lut_applied": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ARDText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Name or identifier of the lookup table (LUT) applied during source-data processing, if applicable."
+        },
+        "sensor_calibration": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ARDText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Reference to sensor calibration parameters used for the source data, for example a URL, DOI or calibration-coefficient source."
+        },
+        "polarimetric_calibration_matrices": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ARDText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Reference or representation of the complex-valued polarimetric distortion matrices describing channel imbalance and cross-talk corrections."
+        },
+        "faraday_mean_rotation_angle": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ARDNumber"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Mean Faraday rotation angle estimated from the polarimetric source data or a model, in degrees."
+        },
+        "faraday_rotation_reference": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ARDText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "URL, DOI or other reference to the method or publication used to derive the mean Faraday rotation estimate."
+        },
+        "ionosphere_indicator": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Whether ionospheric effects are significant enough to exceed the radiometric calibration requirement or goal for the backscatter imagery.",
+          "title": "Ionosphere Indicator"
+        },
+        "performance": {
+          "$ref": "#/$defs/SourcePerformanceMetadata",
+          "description": "Noise-equivalent intensity and other SAR performance indicators reported for the source product."
+        }
+      },
+      "required": [
+        "filename",
+        "product_type",
+        "data_geometry",
+        "acquisition_type",
+        "status",
+        "time_start",
+        "time_stop",
+        "geometry",
+        "processing",
+        "orbit",
+        "swaths",
+        "azimuth",
+        "range",
+        "incidence_angle",
+        "performance"
+      ],
+      "title": "SourceMetadata",
+      "type": "object"
+    },
+    "SourceOrbitMetadata": {
+      "additionalProperties": false,
+      "description": "Orbit metadata specific to an input source scene.",
+      "properties": {
+        "ascending_node_date": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "UTC date and time at which the platform crossed the ascending node for the orbit containing the acquisition.",
+          "title": "Ascending Node Date"
+        },
+        "start_time_from_ascending_node": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ARDNumber"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Elapsed time from the ascending-node crossing to acquisition start, in milliseconds."
+        },
+        "completion_time_from_ascending_node": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ARDNumber"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Elapsed time from the ascending-node crossing to acquisition completion, in milliseconds."
+        },
+        "major_cycle_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ARDPositiveInteger"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Mission-specific identifier of the major orbital cycle containing the acquisition."
+        },
+        "datatake_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ARDPositiveInteger"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Mission-specific identifier of the data take to which the source acquisition belongs."
+        },
+        "data_access": {
+          "$ref": "#/$defs/ARDText",
+          "description": "Location from which orbit state-vector data used for processing can be accessed."
+        },
+        "data_source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ARDText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Classification of the orbit information used for processing, for example predicted, restituted or precise."
+        },
+        "state_vector": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ARDText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Reference to the external orbit state-vector file used during processing, if such a file was used."
+        }
+      },
+      "required": [
+        "data_access"
+      ],
+      "title": "SourceOrbitMetadata",
+      "type": "object"
+    },
+    "SourcePerformanceMetadata": {
+      "additionalProperties": false,
+      "description": "CARD4L source-product performance indicators.",
+      "properties": {
+        "noise_equivalent_intensity_type": {
+          "anyOf": [
+            {
+              "const": "sigma0",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Backscatter convention to which the noise-equivalent intensity estimates refer, such as sigma0.",
+          "title": "Noise Equivalent Intensity Type"
+        },
+        "estimates": {
+          "additionalProperties": {
+            "$ref": "#/$defs/PerformanceEstimate"
+          },
+          "description": "Noise-equivalent intensity statistics for each available polarization channel.",
+          "propertyNames": {
+            "enum": [
+              "HH",
+              "HV",
+              "VH",
+              "VV"
+            ]
+          },
+          "title": "Estimates",
+          "type": "object"
+        },
+        "equivalent_number_of_looks": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ARDPositiveNumber"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Equivalent Number of Looks (ENL) of the source data, describing its effective number of independent looks."
+        },
+        "integrated_side_lobe_ratio": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Mean Integrated Side Lobe Ratio (ISLR) of the source data, in decibels.",
+          "title": "Integrated Side Lobe Ratio"
+        },
+        "peak_side_lobe_ratio": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Mean Peak Side Lobe Ratio (PSLR) of the source data, in decibels.",
+          "title": "Peak Side Lobe Ratio"
+        }
+      },
+      "required": [
+        "estimates"
+      ],
+      "title": "SourcePerformanceMetadata",
+      "type": "object"
+    },
+    "SpeckleFilterMetadata": {
+      "additionalProperties": true,
+      "description": "Speckle-filter configuration applied during processing.",
+      "properties": {
+        "type": {
+          "description": "Name or type of the speckle-filtering algorithm applied to the product.",
+          "title": "Type",
+          "type": "string"
+        },
+        "window_size_col": {
+          "description": "Width of the speckle-filter processing window in raster columns.",
+          "exclusiveMinimum": 0,
+          "title": "Window Size Col",
+          "type": "integer"
+        },
+        "window_size_line": {
+          "description": "Height of the speckle-filter processing window in raster lines.",
+          "exclusiveMinimum": 0,
+          "title": "Window Size Line",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "type",
+        "window_size_col",
+        "window_size_line"
+      ],
+      "title": "SpeckleFilterMetadata",
+      "type": "object"
+    },
+    "SwathAxisMetadata": {
+      "additionalProperties": false,
+      "description": "Sampling and resolution metadata along one SAR image axis.",
+      "properties": {
+        "look_bandwidth": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ARDNumber"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "description": "Processing look bandwidth for this image axis, keyed by swath or beam.",
+          "title": "Look Bandwidth",
+          "type": "object"
+        },
+        "number_of_looks": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ARDPositiveInteger"
+          },
+          "description": "Number of looks combined along this image axis, keyed by swath or beam.",
+          "title": "Number Of Looks",
+          "type": "object"
+        },
+        "pixel_spacing": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ARDPositiveNumber"
+          },
+          "description": "Sampling distance between adjacent source-data pixels along this image axis, keyed by swath or beam.",
+          "title": "Pixel Spacing",
+          "type": "object"
+        },
+        "resolution": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ARDPositiveNumber"
+          },
+          "description": "Spatial resolution along this image axis, keyed by swath or beam; resolution describes the ability to distinguish adjacent targets.",
+          "title": "Resolution",
+          "type": "object"
+        }
+      },
+      "required": [
+        "look_bandwidth",
+        "number_of_looks",
+        "pixel_spacing",
+        "resolution"
+      ],
+      "title": "SwathAxisMetadata",
+      "type": "object"
+    },
+    "WindNormalizationMetadata": {
+      "additionalProperties": false,
+      "description": "Optional wind-normalization metadata used by ocean radar backscatter.",
+      "properties": {
+        "backscatter_measurement": {
+          "const": "sigma0",
+          "description": "Backscatter measurement to which wind normalization is referenced; sigma0 for the supported ORB representation.",
+          "title": "Backscatter Measurement",
+          "type": "string"
+        },
+        "backscatter_convention": {
+          "const": "intensity ratio",
+          "description": "Convention used to express the wind-normalized backscatter reference; represented as an intensity ratio.",
+          "title": "Backscatter Convention",
+          "type": "string"
+        },
+        "reference_direction": {
+          "description": "Reference wind direction used to evaluate the wind-normalization model, in degrees.",
+          "title": "Reference Direction",
+          "type": "number"
+        },
+        "reference_model": {
+          "$ref": "#/$defs/ARDText",
+          "description": "Reference identifying the geophysical model function or model used to derive the wind-normalized backscatter reference."
+        },
+        "reference_speed": {
+          "description": "Reference wind speed used to evaluate the wind-normalization model, in metres per second.",
+          "minimum": 0,
+          "title": "Reference Speed",
+          "type": "number"
+        },
+        "reference_type": {
+          "const": "sigma0-ref",
+          "description": "Identifier of the modeled reference backscatter quantity used for wind normalization; sigma0-ref in the supported representation.",
+          "title": "Reference Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "backscatter_measurement",
+        "backscatter_convention",
+        "reference_direction",
+        "reference_model",
+        "reference_speed",
+        "reference_type"
+      ],
+      "title": "WindNormalizationMetadata",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Canonical metadata transfer object for CESARD STAC and XML writers.",
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0",
+      "default": "1.0.0",
+      "description": "Version of the CESARD ARDMetadata interface schema used by this metadata object.",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "common": {
+      "$ref": "#/$defs/CommonMetadata",
+      "description": "Mission, platform, instrument, orbit and acquisition metadata shared by the ARD product and its contributing source scenes."
+    },
+    "product": {
+      "$ref": "#/$defs/ProductMetadata",
+      "description": "Metadata describing the generated analysis-ready radar product."
+    },
+    "sources": {
+      "additionalProperties": {
+        "$ref": "#/$defs/SourceMetadata"
+      },
+      "description": "Source SAR products contributing to the generated ARD product, keyed by a stable source identifier.",
+      "minProperties": 1,
+      "title": "Sources",
+      "type": "object"
+    }
+  },
+  "required": [
+    "common",
+    "product",
+    "sources"
+  ],
+  "title": "CESARD ARD Metadata",
+  "type": "object"
+}
