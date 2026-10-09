@@ -10,7 +10,7 @@ from statistics import mean
 from cesard.metadata.mapping import ASSET_MAP, NS_MAP
 from cesard.metadata.model import ARDMetadata, ProcessingMetadata
 from cesard.metadata.extract import get_header_size
-from typing import Mapping
+from typing import Mapping, Literal
 import logging
 
 log = logging.getLogger('cesard')
@@ -62,36 +62,51 @@ def parse(
         meta: ARDMetadata,
         target: str,
         assets: list[str],
+        nsmap_ard: dict[str, dict[Literal['NRB', 'ORB'], dict[Literal['key', 'source', 'product'], str]]],
         exist_ok: bool = False
 ) -> None:
     """
-    Wrapper for :func:`~cesard.metadata.xml.source_xml` and :func:`~cesard.metadata.xml.product_xml`.
+    Wrapper for :func:`~cesard.metadata.xml.source_xml`
+    and :func:`~cesard.metadata.xml.product_xml`.
 
     Parameters
     ----------
-    meta:
+    meta
         A validated :class:`~cesard.metadata.model.ARDMetadata` object.
-    target:
+    target
         A path pointing to the root directory of a product scene.
-    assets:
-        List of paths to all GeoTIFF and VRT assets of the currently processed ARD product.
-    exist_ok:
+    assets
+        List of paths to all GeoTIFF and VRT assets of the currently
+        processed ARD product.
+    nsmap_ard
+        A dictionary containing the namespace mappings for the ARD product.
+    exist_ok
         Do not create files if they already exist?
     """
     
-    platform = meta.common.platform_short_name
-    pid = {'Sentinel-1': 's1', 'ERS': 'ers', 'ENVISAT': 'env'}[platform]
-    key = f"{pid}-{meta.product.product_type.lower()}"
     nsmap = deepcopy(NS_MAP)
-    nsmap[key] = nsmap.pop('placeholder').format(meta.common.constellation)
-    src_url = nsmap[key].replace('spec', key.split('-')[1]).replace('role', 'source')
-    prod_url = nsmap[key].replace('spec', key.split('-')[1]).replace('role', 'product')
+    product = meta.product.product_type
+    constellation = meta.common.constellation
+    nsmap_product = nsmap_ard[constellation][product]
+    key = nsmap_product['key']
     
-    nsmap.update({key: src_url})
-    source_xml(meta=meta, target=target, nsmap=nsmap, ard_ns=key, exist_ok=exist_ok)
-    nsmap.update({key: prod_url})
-    product_xml(meta=meta, target=target, assets=assets, nsmap=nsmap, ard_ns=key,
-                exist_ok=exist_ok)
+    nsmap.update({
+        key: nsmap_product['source']
+    })
+    source_xml(
+        meta=meta, target=target,
+        nsmap=nsmap, ard_ns=key,
+        exist_ok=exist_ok
+    )
+    
+    nsmap.update({
+        key: nsmap_product['product']
+    })
+    product_xml(
+        meta=meta, target=target, assets=assets,
+        nsmap=nsmap, ard_ns=key,
+        exist_ok=exist_ok
+    )
 
 
 def source_xml(
