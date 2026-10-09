@@ -1,6 +1,14 @@
 Changelog
 =========
 
+1.4.0 | 2026-10-09
+------------------
+
+* metadata revision and modeling with pydantic (`#46 <https://github.com/SAR-ARD/cesard/pull/46>`_)
+* abstracted XML namespace interface (`#47 <https://github.com/SAR-ARD/cesard/pull/47>`_)
+
+`Full v1.4.0 Changelog <https://github.com/SAR-ARD/cesard/compare/v1.3.0...v1.4.0>`_
+
 1.3.0 | 2026-09-01
 ------------------
 
