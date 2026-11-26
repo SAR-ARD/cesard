@@ -110,7 +110,7 @@ def mosaic(
                                  username=username, password=password)
             bounds = [ext['xmin'], ext['ymin'], ext['xmax'], ext['ymax']]
             dem_create(vectorobject=geometry_4326, src=tiles, dst=outname,
-                       t_srs=epsg, tr=tr, threads=threads,
+                       dem_type=dem_type, t_srs=epsg, tr=tr, threads=threads,
                        outputBounds=bounds)
 
 
